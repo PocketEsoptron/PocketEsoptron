@@ -1031,8 +1031,10 @@ namespace Learner {
                 if (!o.gadget && !o.group)
                     continue;
                 const Fields& raw = raws[i];
-                if (!raw.empty() && m_stateField)
+                if (!raw.empty() && m_stateField) {
+                    o.hasState = true;
                     o.state = uint32_t(valueOr0(raw, m_stateField));
+                }
                 if (!raw.empty())
                     tallyStateField(o, raw);
                 // an older message (a replay) doesn't bring back what left, or what had newer news

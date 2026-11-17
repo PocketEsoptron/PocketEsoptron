@@ -49,7 +49,8 @@ namespace Learner {
         uint32_t group = 0, config = 0;
         bool hasPos = false;
         Vec3 pos;
-        // the gadget state, 0 until the state field is learned
+        // the gadget state, hasState false and 0 until the state field is learned
+        bool hasState = false;
         uint32_t state = 0;
     };
 
