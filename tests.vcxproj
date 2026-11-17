@@ -182,6 +182,7 @@
     <ClCompile Include="src\game_traffic_text.cpp" />
     <ClCompile Include="src\packets\game_traffic.cpp" />
     <ClCompile Include="src\packets\kcp.cpp" />
+    <ClCompile Include="src\packets\learner.cpp" />
     <ClCompile Include="src\packets\messages.cpp" />
     <ClCompile Include="src\packets\packet_capture.cpp" />
     <ClCompile Include="src\packets\reader.cpp" />
@@ -222,6 +223,7 @@
     <ClCompile Include="tests\key_choices_tests.cpp" />
     <ClCompile Include="tests\keybindings_tests.cpp" />
     <ClCompile Include="tests\layer_choice_tests.cpp" />
+    <ClCompile Include="tests\learner_tests.cpp" />
     <ClCompile Include="tests\lua_functions_tests.cpp" />
     <ClCompile Include="tests\lua_patterns_tests.cpp" />
     <ClCompile Include="tests\lit_floor_tests.cpp" />
@@ -287,6 +289,7 @@
     <ClInclude Include="src\update_check.hpp" />
     <ClInclude Include="src\packets\game_traffic.hpp" />
     <ClInclude Include="src\packets\kcp.hpp" />
+    <ClInclude Include="src\packets\learner.hpp" />
     <ClInclude Include="src\packets\messages.hpp" />
     <ClInclude Include="src\packets\packet_capture.hpp" />
     <ClInclude Include="src\packets\reader.hpp" />
