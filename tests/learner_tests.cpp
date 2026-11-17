@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -7,6 +8,9 @@
 #include <vector>
 #include <catch2/catch_test_macros.hpp>
 #include "packets/learner.hpp"
+#include "packets/learning.hpp"
+#include "files.hpp"
+#include "recorded_messages.hpp"
 
 // tests/data/learner holds cuts of real sessions as messages, see its
 // answers.md for where they come from and what each one has to teach.
@@ -16,33 +20,9 @@ using Learner::Learned;
 
 namespace {
     const std::filesystem::path DATA = std::filesystem::path(__FILE__).parent_path() / "data" / "learner";
-    // the whole recordings as messages, only on the PC they were made on
-    const std::filesystem::path RECORDINGS = "D:\\dev\\genshin-overlay\\packets";
-
-    // per message: u64 unix ms, u8 side (0 received, 1 sent), u16 id, u32 size, the body
-    std::vector<Messages::Message> readMessages(const std::filesystem::path& path) {
-        std::vector<Messages::Message> out;
-        std::ifstream file(path, std::ios::binary);
-        uint8_t head[15];
-        while (file.read((char*)head, sizeof(head))) {
-            Messages::Message m;
-            for (int b = 0; b < 8; b++)
-                m.ms |= uint64_t(head[b]) << (8 * b);
-            m.direction = head[8] ? Frames::Direction::Sent : Frames::Direction::Received;
-            m.id = uint16_t(head[9] | head[10] << 8);
-            uint32_t size = 0;
-            for (int b = 0; b < 4; b++)
-                size |= uint32_t(head[11 + b]) << (8 * b);
-            m.body.resize(size);
-            if (!file.read(m.body.data(), size))
-                break;
-            out.push_back(std::move(m));
-        }
-        return out;
-    }
 
     std::vector<Learner::Event> feed(Learner::Learner& learner, const std::string& name) {
-        std::vector<Messages::Message> messages = readMessages(DATA / name);
+        std::vector<Messages::Message> messages = RecordedMessages::read(DATA / name);
         REQUIRE(!messages.empty());
         std::vector<Learner::Event> events;
         for (const Messages::Message& m : messages)
@@ -159,7 +139,7 @@ TEST_CASE("A learned id that doesn't fit is dropped and learned again", "[learne
     CHECK(learner.LearnedNow().at(Kind::ObjectsNear) == answers71().at(Kind::ObjectsNear));
 }
 
-TEST_CASE("The learned file keeps each version", "[learner]") {
+TEST_CASE("The learned file keeps each version, with the shipped ids", "[learner]") {
     Learner::Known known = Learner::Shipped();
     REQUIRE(known.at("7.1.0") == answers71());
     std::string text = Learner::ToJson(known);
@@ -168,6 +148,40 @@ TEST_CASE("The learned file keeps each version", "[learner]") {
     CHECK(back == known);
     CHECK(!Learner::FromJson("not json", back));
     CHECK(!Learner::FromJson("{\"7.2.0\": {\"objects_near\": {\"id\": 70000, \"fields\": [1]}}}", back));
+
+    std::filesystem::path folder = std::filesystem::temp_directory_path() / ("learner-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::remove_all(folder);
+    std::filesystem::path file = folder / "learned-messages.json";
+    // no file yet: the shipped ids
+    CHECK(Learning::Load(file) == Learner::Shipped());
+    // a shipped id wins over the file's, the file adds kinds and versions
+    Learner::Known saved;
+    saved["7.2.0"][Kind::ObjectsNear] = { 100, { 2, 2, 4, 13, 1, 2, 3 } };
+    saved["7.2.0"][Kind::ItemGot] = { 5662, { 5, 9, 1, 2 } };
+    saved["7.3.0"][Kind::PlayerMoved] = { 100, { 1, 2, 3 } };
+    REQUIRE(Learning::Save(file, saved));
+    Learner::Known loaded = Learning::Load(file);
+    CHECK(loaded.at("7.1.0") == answers71());
+    CHECK(loaded.at("7.2.0").at(Kind::ObjectsNear) == Learner::Shipped().at("7.2.0").at(Kind::ObjectsNear));
+    CHECK(loaded.at("7.2.0").at(Kind::PlayerMoved) == Learner::Shipped().at("7.2.0").at(Kind::PlayerMoved));
+    CHECK(loaded.at("7.2.0").at(Kind::ItemGot) == saved.at("7.2.0").at(Kind::ItemGot));
+    CHECK(loaded.at("7.3.0") == saved.at("7.3.0"));
+    // a file that doesn't read is kept aside
+    REQUIRE(Files::writeFile(file, "not json"));
+    CHECK(Learning::Load(file) == Learner::Shipped());
+    CHECK(std::filesystem::exists(folder / "learned-messages.json.broken"));
+    CHECK(!std::filesystem::exists(file));
+    bool saves = true;
+    Learning::Load(file, &saves);
+    CHECK(saves);
+    // one that can't be moved aside isn't saved over
+    REQUIRE(Files::writeFile(file, "not json"));
+    std::filesystem::remove(folder / "learned-messages.json.broken");
+    REQUIRE(Files::writeFile(folder / "learned-messages.json.broken" / "taken", "x"));
+    CHECK(Learning::Load(file, &saves) == Learner::Shipped());
+    CHECK(!saves);
+    CHECK(std::filesystem::exists(file));
+    std::filesystem::remove_all(folder);
 }
 
 TEST_CASE("A login of a known version starts with its ids", "[learner]") {
@@ -183,11 +197,7 @@ TEST_CASE("A login of a known version starts with its ids", "[learner]") {
 }
 
 TEST_CASE("The learner finds nothing wrong on any recording, with nothing known", "[learner]") {
-    std::vector<std::filesystem::path> recordings;
-    std::error_code error;
-    for (auto& entry : std::filesystem::directory_iterator(RECORDINGS, error))
-        if (std::filesystem::exists(entry.path() / "messages.bin"))
-            recordings.push_back(entry.path());
+    std::vector<std::filesystem::path> recordings = RecordedMessages::recordings();
     if (recordings.empty())
         SKIP("no recordings on this PC");
     std::sort(recordings.begin(), recordings.end());
@@ -207,7 +217,7 @@ TEST_CASE("The learner finds nothing wrong on any recording, with nothing known"
     std::vector<Learner::Event> events;
     for (const std::filesystem::path& recording : recordings) {
         INFO(recording.filename().string());
-        std::vector<Messages::Message> messages = readMessages(recording / "messages.bin");
+        std::vector<Messages::Message> messages = RecordedMessages::read(recording / "messages.bin");
         Learner::Learner learner;
         for (const Messages::Message& m : messages)
             learner.Feed(m, events);

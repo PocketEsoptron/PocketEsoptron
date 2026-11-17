@@ -183,6 +183,7 @@
     <ClCompile Include="src\packets\game_traffic.cpp" />
     <ClCompile Include="src\packets\kcp.cpp" />
     <ClCompile Include="src\packets\learner.cpp" />
+    <ClCompile Include="src\packets\learning.cpp" />
     <ClCompile Include="src\packets\messages.cpp" />
     <ClCompile Include="src\packets\packet_capture.cpp" />
     <ClCompile Include="src\packets\reader.cpp" />
@@ -290,6 +291,7 @@
     <ClInclude Include="src\packets\game_traffic.hpp" />
     <ClInclude Include="src\packets\kcp.hpp" />
     <ClInclude Include="src\packets\learner.hpp" />
+    <ClInclude Include="src\packets\learning.hpp" />
     <ClInclude Include="src\packets\messages.hpp" />
     <ClInclude Include="src\packets\packet_capture.hpp" />
     <ClInclude Include="src\packets\reader.hpp" />
@@ -305,6 +307,7 @@
     <ClInclude Include="tests\test_extension.hpp" />
     <ClInclude Include="tests\test_map.hpp" />
     <ClInclude Include="tests\map_screen.hpp" />
+    <ClInclude Include="tests\recorded_messages.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

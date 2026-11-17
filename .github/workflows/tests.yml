@@ -25,6 +25,19 @@ jobs:
         run: |
           msbuild genshin-overlay.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal
 
+      # whole recordings (text and UIDs blanked) and the items pack their answers were checked with,
+      # too big for the repo, see tests/recorded_messages.hpp
+      - name: Get the test recordings
+        shell: pwsh
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download test-recordings-1 --pattern test-recordings.zip --dir $env:RUNNER_TEMP
+          Write-Output "downloaded"
+          Expand-Archive "$env:RUNNER_TEMP\test-recordings.zip" -DestinationPath tests\recordings
+          Write-Output "unpacked: $((Get-ChildItem tests\recordings -Directory).Count) recordings"
+
       - name: Run the tests
         shell: pwsh
         run: build\Release\tests.exe
