@@ -183,6 +183,7 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClCompile Include="src\map_follow.cpp" />
     <ClCompile Include="src\map_tiles.cpp" />
     <ClCompile Include="src\map_tracking.cpp" />
+    <ClCompile Include="src\marker_index.cpp" />
     <ClCompile Include="src\minimap.cpp" />
     <ClCompile Include="src\net.cpp" />
     <ClCompile Include="src\npcap_download.cpp" />
@@ -230,6 +231,7 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClInclude Include="src\files.hpp" />
     <ClInclude Include="src\file_dialogs.hpp" />
     <ClInclude Include="src\item_catalog.hpp" />
+    <ClInclude Include="src\marker_index.hpp" />
     <ClInclude Include="src\item_icons.hpp" />
     <ClInclude Include="src\item_files.hpp" />
     <ClInclude Include="src\item_patch.hpp" />

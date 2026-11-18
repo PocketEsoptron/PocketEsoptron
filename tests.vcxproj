@@ -171,6 +171,7 @@
     <ClCompile Include="src\map_follow.cpp" />
     <ClCompile Include="src\map_tiles.cpp" />
     <ClCompile Include="src\map_tracking.cpp" />
+    <ClCompile Include="src\marker_index.cpp" />
     <ClCompile Include="src\minimap.cpp" />
     <ClCompile Include="src\net.cpp" />
     <ClCompile Include="src\npcap_download.cpp" />
@@ -228,6 +229,7 @@
     <ClCompile Include="tests\layer_choice_tests.cpp" />
     <ClCompile Include="tests\learner_tests.cpp" />
     <ClCompile Include="tests\world_tests.cpp" />
+    <ClCompile Include="tests\marker_index_tests.cpp" />
     <ClCompile Include="tests\lua_functions_tests.cpp" />
     <ClCompile Include="tests\lua_patterns_tests.cpp" />
     <ClCompile Include="tests\lit_floor_tests.cpp" />
@@ -263,6 +265,7 @@
     <ClInclude Include="src\files.hpp" />
     <ClInclude Include="src\file_dialogs.hpp" />
     <ClInclude Include="src\item_catalog.hpp" />
+    <ClInclude Include="src\marker_index.hpp" />
     <ClInclude Include="src\item_icons.hpp" />
     <ClInclude Include="src\item_files.hpp" />
     <ClInclude Include="src\item_patch.hpp" />
