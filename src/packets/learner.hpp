@@ -98,6 +98,10 @@ namespace Learner {
         Known All() const;
         // true once after something was learned or dropped
         bool TakeChanged();
+        // ids that win over what was known or learned, the current version's
+        // included; a kind with the same id loses it. What waited for a newly
+        // set kind is read now, its events go to out
+        void Release(const Known& released, std::vector<Event>& out);
 
     private:
         using Fields = std::vector<Messages::Field>;
@@ -156,6 +160,7 @@ namespace Learner {
         void playerParts(const Fields& fs, bool learned, std::vector<Found>& out);
         void nodes(const Fields& fs, Sig& path, int depth, bool learned, std::vector<Found>& out);
         void hit(uint64_t ms, Kind kind, uint16_t id, const Sig& sig, Partner partner, std::vector<Event>& out);
+        void replay(const std::vector<Kind>& kinds, std::vector<Event>& out);
         void hold(const Messages::Message& message);
         bool pair(uint64_t ms, Kind kind, bool hasId, uint16_t id, const Sig& sig, const Fields& fs, std::vector<Event>& out);
         void moved(uint64_t ms, const Vec3& pos, std::vector<Event>& out);

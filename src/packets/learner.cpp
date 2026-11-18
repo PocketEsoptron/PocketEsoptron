@@ -225,6 +225,38 @@ namespace Learner {
         return all;
     }
 
+    void Learner::Release(const Known& released, std::vector<Event>& out) {
+        std::vector<Kind> set;
+        for (const auto& [version, kinds] : released) {
+            if (version.empty())
+                continue;
+            bool current = version == m_version;
+            LearnedSet& into = current ? m_learned : m_known[version];
+            for (const auto& [kind, learned] : kinds) {
+                for (auto it = into.begin(); it != into.end();) {
+                    if (it->first != kind && !kinds.count(it->first) && it->second.id == learned.id && directionOf(it->first) == directionOf(kind)) {
+                        it = into.erase(it);
+                        m_changed |= current;
+                    } else {
+                        ++it;
+                    }
+                }
+                auto now = into.find(kind);
+                if (now != into.end() && now->second == learned)
+                    continue;
+                into[kind] = learned;
+                if (!current)
+                    continue;
+                m_candidates[int(kind)].clear();
+                m_strikes[int(kind)].clear();
+                m_changed = true;
+                set.push_back(kind);
+            }
+        }
+        if (!set.empty())
+            replay(set, out);
+    }
+
     bool Learner::TakeChanged() {
         bool changed = m_changed;
         m_changed = false;
@@ -861,18 +893,26 @@ namespace Learner {
             return;
         m_learned[kind] = { id, sig };
         m_changed = true;
-        // what waited is read now, in order
+        replay({ kind }, out);
+    }
+
+    // what waited for kinds is read now, in order
+    void Learner::replay(const std::vector<Kind>& kinds, std::vector<Event>& out) {
         Fields hf;
         Event ev;
         std::vector<Fields> raws;
         for (const Held& h : m_held) {
-            if (h.id != id || h.direction != directionOf(kind) || !parse(h.body, hf))
-                continue;
-            raws.clear();
-            if (read(kind, h.ms, hf, sig, ev, raws) != Read::Event)
-                continue;
-            ev.replayed = true;
-            apply(ev, raws, out);
+            for (Kind kind : kinds) {
+                const Learned& learned = m_learned.at(kind);
+                if (h.id != learned.id || h.direction != directionOf(kind) || !parse(h.body, hf))
+                    continue;
+                raws.clear();
+                if (read(kind, h.ms, hf, learned.fields, ev, raws) == Read::Event) {
+                    ev.replayed = true;
+                    apply(ev, raws, out);
+                }
+                break;
+            }
         }
     }
 

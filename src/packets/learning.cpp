@@ -3,6 +3,7 @@
 #include <mutex>
 #include "../files.hpp"
 #include "../helpers.hpp"
+#include "../item_catalog.hpp"
 #include "game_traffic.hpp"
 
 namespace Learning {
@@ -16,10 +17,20 @@ namespace Learning {
     static std::vector<std::pair<int, Listener>> listeners;
     static int nextListener = 1;
 
-    Learner::Known Load(const std::filesystem::path& file, bool* saves) {
+    Learner::Known Released(const ItemCatalog::Catalog* catalog) {
+        Learner::Known known;
+        if (catalog && !catalog->game.learned.empty() && !Learner::FromJson(catalog->game.learned, known))
+            known.clear();
+        return known;
+    }
+
+    Learner::Known Load(const std::filesystem::path& file, const Learner::Known& released, bool* saves) {
         if (saves)
             *saves = true;
-        Learner::Known known = Learner::Shipped();
+        Learner::Known known = released;
+        for (auto& [version, set] : Learner::Shipped())
+            for (auto& [kind, learned] : set)
+                known[version].insert({ kind, learned });
         std::string text = Files::readText(file);
         Learner::Known saved;
         if (!text.empty() && !Learner::FromJson(text, saved)) {
@@ -38,15 +49,27 @@ namespace Learning {
                           << Helpers::utf8(broken.filename()) << ", starting from the shipped ones" << std::endl;
             }
         }
-        // the shipped ids win, the file adds the kinds the build doesn't have
         for (auto& [version, set] : saved)
             for (auto& [kind, learned] : set)
                 known[version].insert({ kind, learned });
         return known;
     }
 
-    bool Save(const std::filesystem::path& file, const Learner::Known& known) {
-        return Files::writeFile(file, Learner::ToJson(known));
+    bool Save(const std::filesystem::path& file, const Learner::Known& known, const Learner::Known& released) {
+        Learner::Known own = known;
+        for (const auto& [version, set] : released) {
+            auto found = own.find(version);
+            if (found == own.end())
+                continue;
+            for (const auto& [kind, learned] : set) {
+                auto same = found->second.find(kind);
+                if (same != found->second.end() && same->second == learned)
+                    found->second.erase(same);
+            }
+            if (found->second.empty())
+                own.erase(found);
+        }
+        return Files::writeFile(file, Learner::ToJson(own));
     }
 
     static void hand(const std::vector<Learner::Event>& events) {
@@ -67,10 +90,19 @@ namespace Learning {
         if (trafficListener)
             return;
         std::filesystem::path file = folder / FILE_NAME;
+        auto pack = ItemCatalog::current();
+        auto catalog = std::make_shared<uint64_t>(pack ? pack->version : 0);
+        auto released = std::make_shared<Learner::Known>(Released(pack.get()));
         bool saves = true;
-        auto learner = std::make_shared<Learner::Learner>(Load(file, &saves));
+        auto learner = std::make_shared<Learner::Learner>(Load(file, *released, &saves));
         auto events = std::make_shared<std::vector<Learner::Event>>();
-        trafficListener = GameTraffic::AddListener([learner, events, file, saves](const Messages::Message& message) {
+        trafficListener = GameTraffic::AddListener([learner, events, file, catalog, released, saves](const Messages::Message& message) {
+            if (ItemCatalog::version() != *catalog) {
+                auto pack = ItemCatalog::current();
+                *catalog = pack ? pack->version : 0;
+                *released = Released(pack.get());
+                learner->Release(*released, *events);
+            }
             std::string version = learner->Version();
             learner->Feed(message, *events);
             if (learner->TakeChanged() || learner->Version() != version) {
@@ -87,7 +119,7 @@ namespace Learning {
                     std::lock_guard lock(mutex);
                     status = now;
                 }
-                if (saves && !now.version.empty() && !Save(file, learner->All()))
+                if (saves && !now.version.empty() && !Save(file, learner->All(), *released))
                     std::cout << "Learned messages: can't write " << Helpers::utf8(file) << std::endl;
             }
             hand(*events);

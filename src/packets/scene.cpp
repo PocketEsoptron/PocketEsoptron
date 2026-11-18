@@ -1,6 +1,8 @@
 #include "scene.hpp"
 #include <map>
 #include <mutex>
+#include <nlohmann/json.hpp>
+#include "../item_catalog.hpp"
 
 namespace Scene {
     using Table = std::map<int, Formula>;
@@ -15,6 +17,36 @@ namespace Scene {
         return { teyvat };
     }
 
+    std::string ToJson(const std::vector<Formula>& formulas) {
+        nlohmann::json all = nlohmann::json::array();
+        for (const Formula& f : formulas)
+            all.push_back({ { "map", f.map }, { "xx", f.xx }, { "xz", f.xz }, { "x0", f.x0 }, { "yx", f.yx }, { "yz", f.yz }, { "y0", f.y0 } });
+        return all.dump();
+    }
+
+    bool FromJson(const std::string& text, std::vector<Formula>& out) {
+        nlohmann::json all = nlohmann::json::parse(text, nullptr, false);
+        if (!all.is_array())
+            return false;
+        std::vector<Formula> read;
+        for (const nlohmann::json& f : all) {
+            if (!f.is_object() || !f.contains("map") || !f["map"].is_number_integer())
+                return false;
+            Formula one;
+            one.map = f["map"].get<int>();
+            double* parts[] = { &one.xx, &one.xz, &one.x0, &one.yx, &one.yz, &one.y0 };
+            const char* names[] = { "xx", "xz", "x0", "yx", "yz", "y0" };
+            for (int i = 0; i < 6; i++) {
+                if (!f.contains(names[i]) || !f[names[i]].is_number())
+                    return false;
+                *parts[i] = f[names[i]].get<double>();
+            }
+            read.push_back(one);
+        }
+        out = std::move(read);
+        return true;
+    }
+
     static std::shared_ptr<const Table> make(const std::vector<Formula>& over) {
         auto table = std::make_shared<Table>();
         for (const Formula& f : Shipped())
@@ -25,17 +57,20 @@ namespace Scene {
     }
 
     static std::mutex mutex;
-    static std::shared_ptr<const Table> table = make({});
+    static std::shared_ptr<const Table> table;
+    static uint64_t tableOf = 0;  // the catalog version it was made with
 
     static std::shared_ptr<const Table> now() {
         std::lock_guard lock(mutex);
+        if (!table || tableOf != ItemCatalog::version()) {
+            std::vector<Formula> released;
+            auto catalog = ItemCatalog::current();
+            if (catalog)
+                FromJson(catalog->game.scenes, released);
+            table = make(released);
+            tableOf = catalog ? catalog->version : 0;
+        }
         return table;
-    }
-
-    void SetFormulas(const std::vector<Formula>& formulas) {
-        auto made = make(formulas);
-        std::lock_guard lock(mutex);
-        table = made;
     }
 
     bool Knows(int map) {

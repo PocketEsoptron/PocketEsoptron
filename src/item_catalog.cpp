@@ -89,6 +89,7 @@ namespace ItemCatalog {
 			else if (name == "areas.json") areas = json::parse(data, nullptr, false);
 			else if (typeOf(name, "positions/", ".json", type)) positions.push_back({ type, data });
 			else if (typeOf(name, "icons/", ".png", type)) icons.push_back({ type, data });
+			else if (name.compare(0, GameTables::FOLDER.size(), GameTables::FOLDER) == 0) catalog->game.read(name, data);
 			return !stopped();
 		});
 		// no positions at all is a broken pack, not a week without points

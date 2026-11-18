@@ -5,6 +5,9 @@
 #include "item_patch.hpp"
 #include "map_data.hpp"
 #include "net.hpp"
+#include "game_tables.hpp"
+#include "packets/learner.hpp"
+#include "packets/scene.hpp"
 #include <algorithm>
 #include <atomic>
 #include <cctype>
@@ -29,6 +32,7 @@ using ordered = nlohmann::ordered_json;
 
 namespace ItemFiles {
 	static const std::string APPSAMPLE = "https://game-data.lemonapi.com/gim/markers_all.v5.compressed.json";
+	static const std::string GAME_TABLES = "https://gitlab.com/Dimbreath/animegamedata2/-/raw/main/ExcelBinOutput/";
 	// a pack bigger than this unpacked isn't ours (today's is about 17 MB)
 	static constexpr size_t MAX_RAW_SIZE = 128u * 1024 * 1024;
 	// A week adds a few points and takes a few away. A map that loses more than
@@ -861,6 +865,56 @@ namespace ItemFiles {
 		return true;
 	}
 
+	std::string trimGameTable(const std::string& name, const std::string& table) {
+		json rows = json::parse(table, nullptr, false);
+		if (!rows.is_array()) return std::string();
+		std::vector<std::string> keys;
+		if (name == GameTables::GADGETS) keys = { "id", "type", "jsonName" };
+		else if (name == GameTables::GATHERS) keys = { "gadgetId", "itemId", "pointType" };
+		else if (name == GameTables::MATERIALS) keys = { "id", "itemType", "materialType" };
+		else return std::string();
+		ordered out = ordered::array();
+		for (const json& row : rows) {
+			if (!row.is_object()) continue;
+			ordered kept = ordered::object();
+			for (const std::string& key : keys)
+				if (row.contains(key)) kept[key] = row[key];
+			if (!kept.empty()) out.push_back(std::move(kept));
+		}
+		return out.dump();
+	}
+
+	// game/: the tables from AnimeGameData, the published pack's when one doesn't come,
+	// and the ids and formulas this build ships
+	static bool writeGame(const std::string& publishedRaw, const fs::path& folder, bool& kept) {
+		kept = false;
+		std::map<std::string, std::string> published;
+		if (!publishedRaw.empty())
+			readPack(publishedRaw, [&](const std::string& name, std::string_view data) {
+				if (name.compare(0, GameTables::FOLDER.size(), GameTables::FOLDER) == 0) published[name] = std::string(data);
+				return true;
+			});
+		const std::pair<std::string, std::string> tables[] = { { GameTables::GADGETS, "GadgetExcelConfigData.json" },
+			{ GameTables::GATHERS, "GatherExcelConfigData.json" }, { GameTables::MATERIALS, "MaterialExcelConfigData.json" } };
+		for (const auto& [name, source] : tables) {
+			Net::Response response;
+			std::string trimmed;
+			if (Net::get(GAME_TABLES + source, response) && response.status == 200) trimmed = trimGameTable(name, response.body);
+			if (trimmed.empty() || trimmed == "[]") {
+				kept = true;
+				if (published[name].empty()) {
+					std::cerr << "[items] " << source << " didn't come, " << name << " is left out" << std::endl;
+					continue;
+				}
+				std::cerr << "[items] " << source << " didn't come, " << name << " stays as published" << std::endl;
+				trimmed = published[name];
+			}
+			if (!Files::writeFile(folder / fs::u8path(name), trimmed)) return false;
+		}
+		return Files::writeFile(folder / fs::u8path(GameTables::LEARNED), Learner::ToJson(Learner::Shipped()))
+			&& Files::writeFile(folder / fs::u8path(GameTables::SCENES), Scene::ToJson(Scene::Shipped()));
+	}
+
 	// Which appsample point each HoYoLAB point is, for showing the comments people left there.
 	static bool pairWithAppsample(Source& source) {
 		Net::Response response;
@@ -913,9 +967,10 @@ namespace ItemFiles {
 
 	int make(const fs::path& folder, bool allowDrop) {
 		// from scratch, so what HoYoLAB removed goes
-		fs::path items = folder / "items";
+		fs::path items = folder / "items", kept = folder / "game-kept.txt";
 		std::error_code ec;
 		fs::remove_all(items, ec);
+		fs::remove(kept, ec);
 
 		std::cout << "Reading HoYoLAB's map items..." << std::endl;
 		Source source;
@@ -943,7 +998,9 @@ namespace ItemFiles {
 		std::string publishedRaw = fetchPublishedPack(published);
 		keepPublishedIcons(publishedRaw, downloadIcons(icons, items / "icons"), items);
 		// without appsample the pack would lose every pair for a week, so the published one stays
-		if (!pairWithAppsample(source) || !write(source, items)) return 1;
+		bool keptGame = false;
+		if (!pairWithAppsample(source) || !write(source, items) || !writeGame(publishedRaw, items, keptGame)) return 1;
+		if (keptGame && !Files::writeFile(kept, "a game table didn't download\n")) return 1;
 
 		std::string raw;
 		if (!pack(items, raw)) return 1;

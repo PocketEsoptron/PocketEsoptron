@@ -180,13 +180,13 @@ TEST_CASE("The learned file keeps each version, with the shipped ids", "[learner
     CHECK(std::filesystem::exists(folder / "learned-messages.json.broken"));
     CHECK(!std::filesystem::exists(file));
     bool saves = true;
-    Learning::Load(file, &saves);
+    Learning::Load(file, {}, &saves);
     CHECK(saves);
     // one that can't be moved aside isn't saved over
     REQUIRE(Files::writeFile(file, "not json"));
     std::filesystem::remove(folder / "learned-messages.json.broken");
     REQUIRE(Files::writeFile(folder / "learned-messages.json.broken" / "taken", "x"));
-    CHECK(Learning::Load(file, &saves) == Learner::Shipped());
+    CHECK(Learning::Load(file, {}, &saves) == Learner::Shipped());
     CHECK(!saves);
     CHECK(std::filesystem::exists(file));
     std::filesystem::remove_all(folder);

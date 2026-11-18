@@ -25,6 +25,7 @@
 //                          null otherwise. appsample is there when appsample has the point,
 //                          appsample_level when that point's level there is above 0.
 //   icons/<type>.png       at most 64 px
+//   game/...               the game's tables, ids and map formulas (game_tables.hpp)
 // HoYoLAB's own key names, written without spaces. A point's region is its
 // area_id, not the box it sits in (a few Inazuma puzzles are outside Inazuma's).
 //
@@ -171,9 +172,15 @@ namespace ItemFiles {
     extern std::vector<std::string> checkBuilt(const std::string& raw, const nlohmann::json& published, bool allowDrop,
         std::map<int, MapCount>& counts);
 
+    // One of the game's tables (AnimeGameData's GadgetExcelConfigData,
+    // GatherExcelConfigData or MaterialExcelConfigData) cut to what its game/
+    // file keeps, by that file's name. Empty when the table doesn't read.
+    extern std::string trimGameTable(const std::string& name, const std::string& table);
+
     // --make-items <folder> [--allow-drop]: downloads everything into
     // folder/items, checks it, then writes the pack and items.json to
-    // folder/out. 1 when it fails or its check does, or when the published
+    // folder/out, and folder/game-kept.txt when a game table didn't download.
+    // 1 when it fails or its check does, or when the published
     // items.json can't be read to compare with, 3 when the published pack is
     // the same. --allow-drop also leaves out points HoYoLAB sends without a
     // good id or type, and replaces a published items.json that doesn't read.

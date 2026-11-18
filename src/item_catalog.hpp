@@ -6,6 +6,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include "game_tables.hpp"
 #include "net_stop.hpp"
 
 // The item files (item_files.hpp says what's in the pack) loaded once into
@@ -68,6 +69,7 @@ namespace ItemCatalog {
 		std::string sha256, built;      // of the pack it came from, set by ItemFiles::open
 		std::vector<TypeGroup> groups;  // HoYoLAB's tree order, groups and types once each
 		std::vector<Region> regions;    // every map's, once each
+		GameTables::Tables game;        // empty tables for a pack without game/
 
 		// empty for a type it doesn't know
 		Points points(int type) const;

@@ -1,0 +1,95 @@
+[
+  {
+    "descTextMapHash": 3827952949,
+    "destroyRule": "DESTROY_RETURN_MATERIAL",
+    "effectDescTextMapHash": 262401463,
+    "effectIcon": "UI_Buff_Item_Recovery_HpAdd",
+    "gadgetId": 70540003,
+    "icon": "UI_ItemIcon_100001",
+    "id": 100001,
+    "interactionTitleTextMapHash": 2832627063,
+    "isSplitDrop": true,
+    "itemType": "ITEM_MATERIAL",
+    "itemUse": [
+      {
+        "useOp": "ITEM_USE_ADD_CUR_HP",
+        "useParam": [
+          "300",
+          "Eff_UI_AvatarIcon_Recovery_Once",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          ""
+        ]
+      }
+    ],
+    "materialType": "MATERIAL_NOTICE_ADD_HP",
+    "maxUseCount": 99,
+    "nameTextMapHash": 2483588484,
+    "rank": 90000,
+    "satiationParams": [
+      5,
+      15000
+    ],
+    "specialDescTextMapHash": 4076021073,
+    "stackLimit": 9999,
+    "typeDescTextMapHash": 2957597022,
+    "useTarget": "ITEM_USE_TARGET_SPECIFY_ALIVE_AVATAR",
+    "weight": 1,
+    "LENNNOAFNLA": "Filter_HEAL"
+  },
+  {
+    "descTextMapHash": 3684099261,
+    "destroyRule": "DESTROY_RETURN_MATERIAL",
+    "effectDescTextMapHash": 667786583,
+    "gadgetId": 70560002,
+    "icon": "UI_ItemIcon_101001",
+    "id": 101001,
+    "interactionTitleTextMapHash": 2821210567,
+    "isSplitDrop": true,
+    "itemType": "ITEM_MATERIAL",
+    "itemUse": [
+      {
+        "useParam": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          ""
+        ]
+      }
+    ],
+    "materialType": "MATERIAL_EXCHANGE",
+    "nameTextMapHash": 4060716292,
+    "rank": 301,
+    "specialDescTextMapHash": 3128374657,
+    "stackLimit": 99999,
+    "typeDescTextMapHash": 4132479446,
+    "weight": 1
+  }
+]

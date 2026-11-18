@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <string>
 #include <vector>
 #include "learner.hpp"
 
@@ -8,6 +9,8 @@
 //   map y = yx * game x + yz * game z + y0
 // The game's y is the height. Underground floors share Teyvat's formula; which
 // floor a point is on is the caller's to say (the overlay's floor, the height).
+// The items pack's game/scenes.json replaces the shipped formula of every map
+// it has.
 
 namespace Scene {
     struct Formula {
@@ -25,11 +28,11 @@ namespace Scene {
 
     // the ones the build knows: Teyvat (map 2)
     extern std::vector<Formula> Shipped();
+    // [{map, xx, xz, x0, yx, yz, y0}] and back, false when it doesn't read
+    extern std::string ToJson(const std::vector<Formula>& formulas);
+    extern bool FromJson(const std::string& text, std::vector<Formula>& out);
 
     // false when there's no formula for map
     extern bool ToMap(const Learner::Vec3& game, int map, MapPos& out);
     extern bool Knows(int map);
-
-    // replaces the shipped ones for every map formulas has
-    extern void SetFormulas(const std::vector<Formula>& formulas);
 }

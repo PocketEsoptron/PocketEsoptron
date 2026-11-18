@@ -1,16 +1,20 @@
 # What the map index and the item files are built from, as one hash per part,
 # so the hourly run only builds the part whose sources changed. Each hash
 # covers only the fields the builders read (src/map_data.cpp makePlan,
-# src/item_files.cpp write and trimPoint, src/appsample.cpp decode).
+# src/item_files.cpp write and trimPoint, src/appsample.cpp decode). The game
+# part is the ETags of the game's tables and the files with the shipped ids and
+# formulas (src/item_files.cpp writeGame); when the tables don't answer it's
+# left as published, the builder keeps the published tables then.
 #
 #   python map_sources.py fetch <out file>
 #   python map_sources.py compare <current> <published>
-#   python map_sources.py merge <published> <current> <out file> [map] [items]
+#   python map_sources.py merge <published> <current> <out file> [map] [items] [game]
 #
 # fetch exits 1 when a source didn't answer. compare prints map=true/false and
 # items=true/false for $GITHUB_OUTPUT; a missing published file counts as all
 # changed. merge writes the published file with the named parts taken from
-# current, so a part that failed to build is tried again next hour.
+# current, so a part that failed to build is tried again next hour (game is
+# left out when the builder kept a published table).
 
 import datetime
 import gzip
@@ -25,8 +29,11 @@ FORMAT = 1
 API = "https://sg-public-api.hoyolab.com/common/map_user/ys_obc"
 STATIC_API = "https://sg-public-api-static.hoyolab.com/common/map_user/ys_obc"
 APPSAMPLE = "https://game-data.lemonapi.com/gim/markers_all.v5.compressed.json"
+GAME_TABLES = "https://gitlab.com/Dimbreath/animegamedata2/-/raw/main/ExcelBinOutput/"
+GAME_FILES = ["GadgetExcelConfigData.json", "GatherExcelConfigData.json", "MaterialExcelConfigData.json"]
+SHIPPED = ["src/packets/learner.cpp", "src/packets/scene.cpp"]
 HEADERS = {"Origin": "https://act.hoyolab.com", "Referer": "https://act.hoyolab.com/", "User-Agent": "genshin-overlay"}
-PARTS = ["map", "items", "appsample"]
+PARTS = ["map", "items", "appsample", "game"]
 
 
 def fail(text):
@@ -120,6 +127,24 @@ def appsample_part():
     return [[row[i] if i is not None and i < len(row) else None for i in at] for row in data]
 
 
+def game_part():
+    tags = []
+    for name in GAME_FILES:
+        try:
+            request = urllib.request.Request(GAME_TABLES + name, method="HEAD", headers={"User-Agent": HEADERS["User-Agent"]})
+            with urllib.request.urlopen(request, timeout=60) as response:
+                tag = response.headers.get("ETag")
+        except OSError as error:
+            print("map sources: " + name + " didn't answer: " + str(error), file=sys.stderr)
+            return None
+        if not tag:
+            print("map sources: " + name + " has no ETag", file=sys.stderr)
+            return None
+        tags.append(tag)
+    root = pathlib.Path(__file__).resolve().parents[2]
+    return [tags, [hashlib.sha256((root / name).read_bytes()).hexdigest() for name in SHIPPED]]
+
+
 def read(path):
     path = pathlib.Path(path)
     if not path.exists():
@@ -142,25 +167,27 @@ def main():
             "items": digest([items_part(map_id) for map_id in maps]),
             "appsample": digest(appsample_part()),
         }
+        game = game_part()
+        hashes["game"] = digest(game) if game is not None else None
         write(sys.argv[2], hashes)
-        print("map sources: " + ", ".join(part + " " + hashes[part][:12] for part in PARTS))
+        print("map sources: " + ", ".join(part + " " + (hashes[part] or "none")[:12] for part in PARTS))
     elif command == "compare" and len(sys.argv) == 4:
         current, published = read(sys.argv[2]), read(sys.argv[3])
         if current is None:
             fail(sys.argv[2] + " isn't a sources file")
-        changed = [part for part in PARTS if published is None or published.get(part) != current[part]]
+        changed = [part for part in PARTS if published is None or (current.get(part) is not None and published.get(part) != current[part])]
         print("map=" + str("map" in changed).lower())
-        print("items=" + str("items" in changed or "appsample" in changed).lower())
+        print("items=" + str("items" in changed or "appsample" in changed or "game" in changed).lower())
         print("map sources: changed " + (", ".join(changed) if changed else "nothing"), file=sys.stderr)
     elif command == "merge" and len(sys.argv) >= 5:
         published, current = read(sys.argv[2]) or {}, read(sys.argv[3])
         if current is None:
             fail(sys.argv[3] + " isn't a sources file")
         done = set(sys.argv[5:])
-        taken = {"map": "map" in done, "items": "items" in done, "appsample": "items" in done}
-        write(sys.argv[4], {part: current[part] if taken[part] else published.get(part) for part in PARTS})
+        taken = {"map": "map" in done, "items": "items" in done, "appsample": "items" in done, "game": "game" in done}
+        write(sys.argv[4], {part: current.get(part) if taken[part] and current.get(part) is not None else published.get(part) for part in PARTS})
     else:
-        fail("usage: map_sources.py fetch <out> | compare <current> <published> | merge <published> <current> <out> [map] [items]")
+        fail("usage: map_sources.py fetch <out> | compare <current> <published> | merge <published> <current> <out> [map] [items] [game]")
 
 
 main()
