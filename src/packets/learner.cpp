@@ -159,7 +159,14 @@ namespace Learner {
         v71[Kind::SceneChanged] = { 9582, { 8 } };
         LearnedSet& v72 = known["7.2.0"];
         v72[Kind::ObjectsNear] = { 4469, { 2, 2, 4, 13, 1, 2, 3 } };
+        v72[Kind::ItemGot] = { 5662, { 5, 9, 1, 2 } };
+        v72[Kind::StateChanged] = { 4303, { 2, 3 } };
+        v72[Kind::ObjectGone] = { 7450, { 10, 13 } };
+        v72[Kind::Interact] = { 1891, { 11, 7 } };
+        v72[Kind::InteractAnswer] = { 20297, { 8, 2 } };
+        v72[Kind::ChestOpened] = { 22094, { 1, 7 } };
         v72[Kind::PlayerMoved] = { 24007, { 12, 14, 14, 8, 1, 2 } };
+        v72[Kind::SceneChanged] = { 27748, { 14 } };
         return known;
     }
 

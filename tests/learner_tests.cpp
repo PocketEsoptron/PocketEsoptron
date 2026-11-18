@@ -93,7 +93,15 @@ TEST_CASE("The learner reads 7.2's version from the login and finds its objects 
     };
     requireLearned(learner, answers, { Kind::ObjectsNear, Kind::PlayerMoved });
     // what the build ships for 7.2 is what this finds
-    CHECK(Learner::Shipped().at("7.2.0") == learner.LearnedNow());
+    for (auto& [kind, learned] : learner.LearnedNow())
+        CHECK(Learner::Shipped().at("7.2.0").at(kind) == learned);
+}
+
+TEST_CASE("The build ships the 7.2 ids a PC learned in play", "[learner]") {
+    Learner::Known learned;
+    REQUIRE(Learner::FromJson(Files::readText(DATA / "7.2-learned.json"), learned));
+    REQUIRE(learned.at("7.2.0").size() == size_t(Learner::KINDS));
+    CHECK(Learner::Shipped().at("7.2.0") == learned.at("7.2.0"));
 }
 
 TEST_CASE("Messages before a kind is learned are read once it is, and nothing comes out before", "[learner]") {

@@ -34,7 +34,9 @@ groups) and what was done in game:
 
 7.2: objects near is 4469 (entries in 2: entity 2, position 4, gadget part 13 with 1, 2, 3), player
 moved is 24007 (the part at 12, 14, 14, 8: entity 1, position 2). The other 7.2 kinds aren't in
-these recordings (no interact, no pickup).
+these recordings (no interact, no pickup). 7.2-learned.json is the learned file of a PC that
+played 7.2 with the overlay (its 7.2 part): the same two, and the other seven kinds as learned in
+play.
 
 What each file teaches with nothing known: 7.1-pickups all but chest opened, 7.1-puzzles all nine,
 7.2-login then 7.2-walk the version 7.2.0, objects near and player moved.
