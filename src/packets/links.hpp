@@ -30,12 +30,14 @@ namespace Links {
     // the map item types each route can mark, and every type an object can sit on
     struct Types {
         std::unordered_set<int> opened, pickedUp, regrows, places;
+        // the Chests group's types, and the Buried, Sealed and Light-Revealed chests
+        std::unordered_set<int> chests, puzzleChests;
         const std::unordered_set<int>& of(Route route) const;
     };
-    // opened: Chests, Special Items, the mora chests, Geo Sigil and the Buried,
-    // Sealed and Light-Revealed chests; picked up: Special Items; regrows: Local
-    // Specialties, Ores and Inventory / Materials; places: the Chests, Special
-    // Items, Experience and Puzzle Chest groups
+    // opened: Chests, Special Items, the mora chests, Geo Sigil and the puzzle
+    // chests; picked up: Special Items; regrows: Local Specialties, Ores and
+    // Inventory / Materials; places: the Chests, Special Items, Experience and
+    // Puzzle Chest groups
     extern Types TypesOf(const ItemCatalog::Catalog& catalog);
 
     // the map an object is on by its group, 0 when it isn't one the overlay knows

@@ -1,0 +1,15 @@
+[
+{"id":47835,"map_id":2,"x_pos":-2994.5,"y_pos":2711.75,"area_id":4,"point_group":{"group_id":5,"floor_id":30},"appsample":48411},
+{"id":47834,"map_id":2,"x_pos":-2984,"y_pos":2674.5,"area_id":4,"point_group":{"group_id":5,"floor_id":30},"appsample":48412},
+{"id":35379,"map_id":2,"x_pos":-4668,"y_pos":2725.5604999999996,"area_id":4,"point_group":{"group_id":44,"floor_id":54},"appsample":38018},
+{"id":34198,"map_id":2,"x_pos":-4175.5,"y_pos":3070.5,"area_id":4,"point_group":{"group_id":19,"floor_id":108},"appsample":36764},
+{"id":32581,"map_id":2,"x_pos":-4491.5,"y_pos":3001.75,"area_id":4,"point_group":null,"appsample":35270},
+{"id":32579,"map_id":2,"x_pos":-3035.25,"y_pos":2676,"area_id":4,"point_group":{"group_id":5,"floor_id":30},"appsample":35272},
+{"id":32577,"map_id":2,"x_pos":-3278.25,"y_pos":1766.75,"area_id":4,"point_group":null,"appsample":35274},
+{"id":32569,"map_id":2,"x_pos":-3115.285371791282,"y_pos":2866.250915611179,"area_id":4,"point_group":{"group_id":6,"floor_id":31},"appsample":35282},
+{"id":32568,"map_id":2,"x_pos":-3102.4999028247494,"y_pos":2858.5002746833534,"area_id":4,"point_group":{"group_id":6,"floor_id":31},"appsample":35283},
+{"id":32567,"map_id":2,"x_pos":-3100.2782779979752,"y_pos":2879.2410270104547,"area_id":4,"point_group":{"group_id":6,"floor_id":31},"appsample":35284},
+{"id":30830,"map_id":2,"x_pos":-4516.25,"y_pos":2763.25,"area_id":4,"point_group":null,"appsample":33157},
+{"id":30803,"map_id":2,"x_pos":-4706.294700615356,"y_pos":2819.2606210896665,"area_id":4,"point_group":null,"appsample":33184},
+{"id":30801,"map_id":2,"x_pos":-4657.260883628087,"y_pos":2543.7262856704856,"area_id":4,"point_group":null,"appsample":33186}
+]

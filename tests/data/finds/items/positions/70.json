@@ -1,0 +1,17 @@
+[
+{"id":51090,"map_id":2,"x_pos":-5330,"y_pos":-1551.5,"area_id":8,"point_group":null,"appsample":51743,"appsample_level":5},
+{"id":46924,"map_id":2,"x_pos":-6754.75,"y_pos":1809.5,"area_id":4,"point_group":null,"appsample":47541,"appsample_level":5},
+{"id":42115,"map_id":2,"x_pos":-5868.5,"y_pos":2567.9990799036796,"area_id":4,"point_group":null,"appsample":45768,"appsample_level":5},
+{"id":33511,"map_id":2,"x_pos":-4564.5,"y_pos":2855.7202288655953,"area_id":4,"point_group":{"group_id":18,"floor_id":40},"appsample":36164,"appsample_level":5},
+{"id":33407,"map_id":2,"x_pos":-2978.75,"y_pos":2700.9213855982134,"area_id":4,"point_group":{"group_id":5,"floor_id":30},"appsample":36159,"appsample_level":5},
+{"id":32903,"map_id":2,"x_pos":-3161.25,"y_pos":2833.25,"area_id":4,"point_group":null,"appsample":35701,"appsample_level":5},
+{"id":29011,"map_id":2,"x_pos":-4468,"y_pos":2803.5,"area_id":4,"point_group":null,"appsample":32486,"appsample_level":5},
+{"id":28993,"map_id":2,"x_pos":-4128,"y_pos":3123.75,"area_id":4,"point_group":{"group_id":19,"floor_id":108},"appsample":32504,"appsample_level":5},
+{"id":28992,"map_id":2,"x_pos":-4116.5,"y_pos":3081.75,"area_id":4,"point_group":{"group_id":19,"floor_id":108},"appsample":32505,"appsample_level":5},
+{"id":28991,"map_id":2,"x_pos":-4158.5,"y_pos":3058,"area_id":4,"point_group":{"group_id":19,"floor_id":108},"appsample":32506,"appsample_level":5},
+{"id":28990,"map_id":2,"x_pos":-4200,"y_pos":3067.25,"area_id":4,"point_group":{"group_id":19,"floor_id":108},"appsample":32507,"appsample_level":5},
+{"id":28981,"map_id":2,"x_pos":-3024.5,"y_pos":2888.5,"area_id":4,"point_group":{"group_id":6,"floor_id":31},"appsample":32516,"appsample_level":5},
+{"id":28980,"map_id":2,"x_pos":-3044.25,"y_pos":2967.25,"area_id":4,"point_group":{"group_id":6,"floor_id":31},"appsample":32517,"appsample_level":5},
+{"id":28979,"map_id":2,"x_pos":-3153.25,"y_pos":2963,"area_id":4,"point_group":{"group_id":6,"floor_id":31},"appsample":32518,"appsample_level":5},
+{"id":28977,"map_id":2,"x_pos":-2949.75,"y_pos":2610.25,"area_id":4,"point_group":{"group_id":5,"floor_id":30},"appsample":32520,"appsample_level":5}
+]

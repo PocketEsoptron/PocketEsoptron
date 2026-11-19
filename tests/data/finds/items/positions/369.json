@@ -1,0 +1,17 @@
+[
+{"id":46915,"map_id":2,"x_pos":-6508.75,"y_pos":1703.75,"area_id":4,"point_group":null,"appsample":47550,"appsample_level":5},
+{"id":46914,"map_id":2,"x_pos":-6645.75,"y_pos":1707.75,"area_id":4,"point_group":null,"appsample":47551,"appsample_level":5},
+{"id":32906,"map_id":2,"x_pos":-4399.25,"y_pos":2742.5,"area_id":4,"point_group":null,"appsample":35698,"appsample_level":5},
+{"id":32800,"map_id":2,"x_pos":-3048.5,"y_pos":2843.5,"area_id":4,"point_group":{"group_id":6,"floor_id":31},"appsample":35608,"appsample_level":5},
+{"id":32521,"map_id":2,"x_pos":-4464.75,"y_pos":2934.25,"area_id":4,"point_group":{"group_id":18,"floor_id":40},"appsample":35330,"appsample_level":5},
+{"id":32520,"map_id":2,"x_pos":-4527,"y_pos":2615.25,"area_id":4,"point_group":null,"appsample":35331,"appsample_level":5},
+{"id":31195,"map_id":2,"x_pos":-3042.25,"y_pos":2536.75,"area_id":4,"point_group":null,"appsample":32827,"appsample_level":5},
+{"id":31194,"map_id":2,"x_pos":-3096,"y_pos":2683.75,"area_id":4,"point_group":null,"appsample":32828,"appsample_level":5},
+{"id":31193,"map_id":2,"x_pos":-3106,"y_pos":2874.75,"area_id":4,"point_group":null,"appsample":32829,"appsample_level":5},
+{"id":31185,"map_id":2,"x_pos":-4132.25,"y_pos":2906.75,"area_id":4,"point_group":null,"appsample":32837,"appsample_level":5},
+{"id":31184,"map_id":2,"x_pos":-4145.25,"y_pos":2729.75,"area_id":4,"point_group":null,"appsample":32838,"appsample_level":5},
+{"id":31183,"map_id":2,"x_pos":-4330.25,"y_pos":2845.75,"area_id":4,"point_group":null,"appsample":32839,"appsample_level":5},
+{"id":31182,"map_id":2,"x_pos":-4602.25,"y_pos":2677,"area_id":4,"point_group":null,"appsample":32840,"appsample_level":5},
+{"id":31181,"map_id":2,"x_pos":-4669.25,"y_pos":2534.5,"area_id":4,"point_group":null,"appsample":32841,"appsample_level":5},
+{"id":31176,"map_id":2,"x_pos":-4096,"y_pos":3161.25,"area_id":4,"point_group":{"group_id":19,"floor_id":108},"appsample":32846,"appsample_level":5}
+]

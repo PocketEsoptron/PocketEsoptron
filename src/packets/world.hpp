@@ -105,6 +105,8 @@ namespace World {
         uint64_t sceneMs = 0;
     };
     extern Status GetStatus();
+    // runs see on the World under its lock, not at all while it isn't started; keep it short
+    extern void Visit(const std::function<void(const World&)>& see);
 
     // Called on GameTraffic's worker thread for every event, keep it short.
     // Gives an id for RemoveListener.

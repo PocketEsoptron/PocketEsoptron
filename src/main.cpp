@@ -22,6 +22,7 @@
 #include "map_tracking.hpp"
 #include "minimap.hpp"
 #include "locator/map_locator.hpp"
+#include "packets/finds.hpp"
 #include "packets/game_traffic.hpp"
 #include "packets/learning.hpp"
 #include "packets/world.hpp"
@@ -295,6 +296,7 @@ int main(int argc, char** argv) {
     MiniMap::Start(Helpers::dataDirectory() / "map_data");
     Learning::Start(Helpers::dataDirectory());
     World::Start();
+    Finds::Start(Helpers::dataDirectory());
     // off until the player turns it on in the menu
     if (Settings::readGameTraffic) GameTraffic::Start();
     Extensions::initExtensions();
@@ -306,6 +308,7 @@ int main(int argc, char** argv) {
     ItemFiles::AskToStop();
     ScreenPictures::stop();
     GameTraffic::Stop();
+    Finds::Stop();
     World::Stop();
     Learning::Stop();
     // first, it grabs the game and asks the map matching, which the tracker closes

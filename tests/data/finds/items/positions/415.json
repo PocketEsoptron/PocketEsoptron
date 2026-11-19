@@ -1,0 +1,11 @@
+[
+{"id":39945,"map_id":2,"x_pos":-3015.911427197354,"y_pos":2929.4487531665254,"area_id":4,"point_group":null,"appsample":42609},
+{"id":35706,"map_id":2,"x_pos":-3563.75,"y_pos":2411.5,"area_id":4,"point_group":null,"appsample":38299},
+{"id":33797,"map_id":2,"x_pos":-4199.75,"y_pos":3063.5,"area_id":4,"point_group":null,"appsample":36432},
+{"id":33796,"map_id":2,"x_pos":-4160.75,"y_pos":3058.25,"area_id":4,"point_group":{"group_id":19,"floor_id":108},"appsample":36433},
+{"id":32589,"map_id":2,"x_pos":-2961,"y_pos":2748.5,"area_id":4,"point_group":{"group_id":5,"floor_id":30},"appsample":35262},
+{"id":30871,"map_id":2,"x_pos":-4131,"y_pos":3193.5,"area_id":4,"point_group":null,"appsample":33116},
+{"id":30860,"map_id":2,"x_pos":-4309.750291525752,"y_pos":2760.5002746833534,"area_id":4,"point_group":null,"appsample":33127},
+{"id":30859,"map_id":2,"x_pos":-4575.507676844811,"y_pos":2536.433618189587,"area_id":4,"point_group":null,"appsample":33128},
+{"id":30858,"map_id":2,"x_pos":-4384.580752633394,"y_pos":2687.2875400583034,"area_id":4,"point_group":null,"appsample":33129}
+]

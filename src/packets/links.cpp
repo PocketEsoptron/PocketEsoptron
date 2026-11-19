@@ -70,8 +70,12 @@ namespace Links {
                     out.pickedUp.insert(type.id);
                 if (group.id == LOCAL_SPECIALTIES || group.id == ORES || group.id == MATERIALS)
                     out.regrows.insert(type.id);
+                if (group.id == CHESTS)
+                    out.chests.insert(type.id);
             }
-        out.opened.insert({ GEO_SIGIL, BURIED_CHEST, SEALED_CHEST, LIGHT_REVEALED_CHEST });
+        out.puzzleChests = { BURIED_CHEST, SEALED_CHEST, LIGHT_REVEALED_CHEST };
+        out.opened.insert(out.puzzleChests.begin(), out.puzzleChests.end());
+        out.opened.insert(GEO_SIGIL);
         return out;
     }
 

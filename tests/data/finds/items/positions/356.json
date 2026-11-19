@@ -1,0 +1,9 @@
+[
+{"id":55148,"map_id":2,"x_pos":-4836.75,"y_pos":-2281.75,"area_id":8,"point_group":null,"appsample":55711,"appsample_level":5},
+{"id":53936,"map_id":2,"x_pos":-5410.5,"y_pos":-2163.25,"area_id":8,"point_group":{"group_id":20,"floor_id":110},"appsample":55067,"appsample_level":5},
+{"id":50159,"map_id":2,"x_pos":-5307.749693780601,"y_pos":-1095.5014210161526,"area_id":8,"point_group":null,"appsample":50869,"appsample_level":5},
+{"id":46573,"map_id":2,"x_pos":-6817.25,"y_pos":1229.25,"area_id":4,"point_group":null,"appsample":47245,"appsample_level":5},
+{"id":41955,"map_id":2,"x_pos":-5210.086222396215,"y_pos":2794.8900620577006,"area_id":4,"point_group":null,"appsample":45928,"appsample_level":5},
+{"id":31327,"map_id":2,"x_pos":-3549.081958610748,"y_pos":2801.5166664123535,"area_id":4,"point_group":null,"appsample":33926,"appsample_level":5},
+{"id":31325,"map_id":2,"x_pos":-3432.928120081684,"y_pos":2699.5166664123535,"area_id":4,"point_group":null,"appsample":33928,"appsample_level":5}
+]

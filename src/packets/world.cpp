@@ -316,6 +316,12 @@ namespace World {
         return s;
     }
 
+    void Visit(const std::function<void(const World&)>& see) {
+        std::lock_guard lock(mutex);
+        if (world)
+            see(*world);
+    }
+
     int AddListener(Listener listener) {
         std::lock_guard lock(listenersMutex);
         int id = nextListener++;
