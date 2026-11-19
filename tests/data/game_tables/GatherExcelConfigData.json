@@ -26,5 +26,28 @@
     "pointType": 1001,
     "refreshId": 999930,
     "saveType": "GATHER_SAVE_TYPE_LOW"
+  },
+  {
+    "gadgetId": 70590074,
+    "isForbidGuest": true,
+    "itemId": 107023,
+    "pointType": 4016
+  },
+  {
+    "areaId": 998,
+    "gadgetId": 70520003,
+    "initDisableInteract": true,
+    "itemId": 101003,
+    "pointType": 1003,
+    "refreshId": 999932,
+    "saveType": "GATHER_SAVE_TYPE_HIGH"
+  },
+  {
+    "areaId": 6,
+    "gadgetId": 70540076,
+    "itemId": 101249,
+    "pointType": 2078,
+    "saveType": "GATHER_SAVE_TYPE_OWN",
+    "specialGathering": true
   }
 ]

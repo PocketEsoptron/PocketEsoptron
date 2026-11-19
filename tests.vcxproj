@@ -157,6 +157,7 @@
     <ClCompile Include="src\taskbar.cpp" />
     <ClCompile Include="src\item_catalog.cpp" />
     <ClCompile Include="src\game_tables.cpp" />
+    <ClCompile Include="src\regrow.cpp" />
     <ClCompile Include="src\item_icons.cpp" />
     <ClCompile Include="src\item_files.cpp" />
     <ClCompile Include="src\item_patch.cpp" />
@@ -232,6 +233,7 @@
     <ClCompile Include="tests\world_tests.cpp" />
     <ClCompile Include="tests\marker_index_tests.cpp" />
     <ClCompile Include="tests\game_tables_tests.cpp" />
+    <ClCompile Include="tests\regrow_tests.cpp" />
     <ClCompile Include="tests\lua_functions_tests.cpp" />
     <ClCompile Include="tests\lua_patterns_tests.cpp" />
     <ClCompile Include="tests\lit_floor_tests.cpp" />
@@ -268,6 +270,7 @@
     <ClInclude Include="src\file_dialogs.hpp" />
     <ClInclude Include="src\item_catalog.hpp" />
     <ClInclude Include="src\game_tables.hpp" />
+    <ClInclude Include="src\regrow.hpp" />
     <ClInclude Include="src\marker_index.hpp" />
     <ClInclude Include="src\item_icons.hpp" />
     <ClInclude Include="src\item_files.hpp" />

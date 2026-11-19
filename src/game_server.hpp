@@ -26,6 +26,8 @@ namespace GameServer {
 	inline const int ResetHour = 4;
 	// the first daily reset after now, both in Unix seconds
 	int64_t nextReset(const Server& server, int64_t now);
+	// the first time after now the server's clock shows this hour
+	int64_t nextAt(const Server& server, int hour, int64_t now);
 
 	// The "Game server" choice row, "Not picked" first. Saves the pick and
 	// gives true when the player changed it.

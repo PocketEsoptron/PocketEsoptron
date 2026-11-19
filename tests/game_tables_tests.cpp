@@ -58,11 +58,12 @@ TEST_CASE("The game's tables are cut to the fields game/ keeps", "[game_tables]"
     CHECK(gadgets[0] == nlohmann::json({ { "id", 40200002 }, { "type", "AirflowField" } }));
     CHECK(gadgets[1] == nlohmann::json({ { "id", 70211101 }, { "type", "Chest" }, { "jsonName", "SceneObj_Chest_Default_Lv1" } }));
     nlohmann::json gathers = nlohmann::json::parse(ItemFiles::trimGameTable(GameTables::GATHERS, table("GatherExcelConfigData.json")));
-    REQUIRE(gathers.size() == 3);
-    CHECK(gathers[0] == nlohmann::json({ { "gadgetId", 70540003 }, { "itemId", 100001 }, { "pointType", 2006 } }));
+    REQUIRE(gathers.size() == 6);
+    CHECK(gathers[0] == nlohmann::json({ { "gadgetId", 70540003 }, { "itemId", 100001 }, { "pointType", 2006 }, { "refreshId", 999900 } }));
+    CHECK(gathers[3] == nlohmann::json({ { "gadgetId", 70590074 }, { "itemId", 107023 }, { "pointType", 4016 } }));
     nlohmann::json materials = nlohmann::json::parse(ItemFiles::trimGameTable(GameTables::MATERIALS, table("MaterialExcelConfigData.json")));
-    REQUIRE(materials.size() == 2);
-    CHECK(materials[0] == nlohmann::json({ { "id", 100001 }, { "itemType", "ITEM_MATERIAL" }, { "materialType", "MATERIAL_NOTICE_ADD_HP" } }));
+    REQUIRE(materials.size() == 6);
+    CHECK(materials[0] == nlohmann::json({ { "id", 100001 }, { "itemType", "ITEM_MATERIAL" }, { "materialType", "MATERIAL_NOTICE_ADD_HP" }, { "rank", 90000 } }));
     CHECK(ItemFiles::trimGameTable(GameTables::GADGETS, "not json").empty());
     CHECK(ItemFiles::trimGameTable("game/other.json", table("GadgetExcelConfigData.json")).empty());
 }
@@ -86,12 +87,20 @@ TEST_CASE("A pack with game/ gives the tables, the ids and the formulas", "[game
     CHECK(gathers[0].item == 100001);
     CHECK(gathers[0].pointType == 2006);
     CHECK(gathers[1].pointType == 3001);
+    CHECK(gathers[0].refresh == 999900);
     CHECK(game.gathers(70211101).empty());
+    CHECK(game.knowsRanks());
+    // a Hydroculus is picked up once
+    std::vector<GameTables::Gather> hydroculus = game.gathers(70590074);
+    REQUIRE(hydroculus.size() == 1);
+    CHECK(hydroculus[0].item == 107023);
+    CHECK(hydroculus[0].refresh == 0);
 
     GameTables::Material material;
     REQUIRE(game.material(gathers[0].item, material));
     CHECK(material.itemType == "ITEM_MATERIAL");
     CHECK(material.materialType == "MATERIAL_NOTICE_ADD_HP");
+    CHECK(material.rank == 90000);
     REQUIRE(game.material(101001, material));
     CHECK(material.materialType == "MATERIAL_EXCHANGE");
 

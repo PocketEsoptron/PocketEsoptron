@@ -168,6 +168,7 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClCompile Include="src\taskbar.cpp" />
     <ClCompile Include="src\item_catalog.cpp" />
     <ClCompile Include="src\game_tables.cpp" />
+    <ClCompile Include="src\regrow.cpp" />
     <ClCompile Include="src\item_icons.cpp" />
     <ClCompile Include="src\item_files.cpp" />
     <ClCompile Include="src\item_patch.cpp" />
@@ -233,6 +234,7 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClInclude Include="src\file_dialogs.hpp" />
     <ClInclude Include="src\item_catalog.hpp" />
     <ClInclude Include="src\game_tables.hpp" />
+    <ClInclude Include="src\regrow.hpp" />
     <ClInclude Include="src\marker_index.hpp" />
     <ClInclude Include="src\item_icons.hpp" />
     <ClInclude Include="src\item_files.hpp" />

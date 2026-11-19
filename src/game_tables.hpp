@@ -9,8 +9,8 @@
 // them under game/:
 //
 //   game/gadgets.json            [{id, type, jsonName}], from GadgetExcelConfigData
-//   game/gathers.json            [{gadgetId, itemId, pointType}], from GatherExcelConfigData
-//   game/materials.json          [{id, itemType, materialType}], from MaterialExcelConfigData
+//   game/gathers.json            [{gadgetId, itemId, pointType, refreshId}], from GatherExcelConfigData
+//   game/materials.json          [{id, itemType, materialType, rank}], from MaterialExcelConfigData
 //   game/learned-messages.json   Learner::ToJson of the shipped ids
 //   game/scenes.json             [{map, xx, xz, x0, yx, yz, y0}], Scene::Formula
 // The tables keep AnimeGameData's key names. A field the game leaves empty is
@@ -32,11 +32,15 @@ namespace GameTables {
 
 	struct Gather {
 		uint32_t gadget = 0, item = 0, pointType = 0;
+		// how it grows back, 0 when the table doesn't say (Regrow goes by the item then)
+		uint32_t refresh = 0;
 	};
 
 	struct Material {
 		uint32_t id = 0;
 		std::string_view itemType, materialType;
+		// the game sorts items by it, one per kind: 311 and up a local specialty, 321 a cooking ingredient
+		uint32_t rank = 0;
 	};
 
 	class Tables {
@@ -48,6 +52,10 @@ namespace GameTables {
 		size_t gadgetCount() const { return m_gadgets.size(); }
 		size_t gatherCount() const { return m_gathers.size(); }
 		size_t materialCount() const { return m_materials.size(); }
+		// the refreshId any gather point of the item has, 0 when none does
+		uint32_t refreshOf(uint32_t item) const;
+		// the materials have their ranks, so Regrow can tell what grows back; a pack from before doesn't
+		bool knowsRanks() const { return m_knowsRanks; }
 		size_t bytes() const;
 
 		// the files' text, empty when the pack has none
@@ -66,10 +74,12 @@ namespace GameTables {
 		struct MaterialRow {
 			uint32_t id = 0;
 			uint16_t itemType = 0, materialType = 0;
+			uint32_t rank = 0;
 		};
 		std::vector<GadgetRow> m_gadgets;      // by id
 		std::vector<Gather> m_gathers;         // by gadget
 		std::vector<MaterialRow> m_materials;  // by id
+		bool m_knowsRanks = false;
 		std::string m_names;                   // every jsonName, one after the other
 		std::vector<std::string> m_words{ std::string() };  // type names, once each; 0 is the empty one
 		uint16_t word(const std::string& text);

@@ -91,5 +91,172 @@
     "stackLimit": 99999,
     "typeDescTextMapHash": 4132479446,
     "weight": 1
+  },
+  {
+    "descTextMapHash": 4227078653,
+    "destroyRule": "DESTROY_RETURN_MATERIAL",
+    "effectDescTextMapHash": 3489381567,
+    "gadgetId": 70560004,
+    "icon": "UI_ItemIcon_101003",
+    "id": 101003,
+    "interactionTitleTextMapHash": 3717274703,
+    "isSplitDrop": true,
+    "itemType": "ITEM_MATERIAL",
+    "itemUse": [
+      {
+        "useParam": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          ""
+        ]
+      }
+    ],
+    "materialType": "MATERIAL_EXCHANGE",
+    "nameTextMapHash": 1448077684,
+    "rank": 301,
+    "specialDescTextMapHash": 4076392705,
+    "stackLimit": 99999,
+    "typeDescTextMapHash": 1066623366,
+    "weight": 1
+  },
+  {
+    "descTextMapHash": 1240419541,
+    "destroyRule": "DESTROY_RETURN_MATERIAL",
+    "effectDescTextMapHash": 3504212287,
+    "icon": "UI_ItemIcon_101249",
+    "id": 101249,
+    "interactionTitleTextMapHash": 99861855,
+    "isSplitDrop": true,
+    "itemType": "ITEM_MATERIAL",
+    "itemUse": [
+      {
+        "useParam": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          ""
+        ]
+      }
+    ],
+    "materialType": "MATERIAL_EXCHANGE",
+    "nameTextMapHash": 2670149892,
+    "rank": 316,
+    "specialDescTextMapHash": 3302607233,
+    "stackLimit": 9999,
+    "typeDescTextMapHash": 346501302,
+    "weight": 1
+  },
+  {
+    "descTextMapHash": 3318212917,
+    "effectDescTextMapHash": 3645484047,
+    "effectGadgetID": 70590075,
+    "effectName": "Eff_SceneObj_FontaineCrystal_Absorb",
+    "gadgetId": 70590074,
+    "icon": "UI_ItemIcon_107023",
+    "id": 107023,
+    "interactionTitleTextMapHash": 3811503607,
+    "itemType": "ITEM_MATERIAL",
+    "itemUse": [
+      {
+        "useParam": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          ""
+        ]
+      }
+    ],
+    "materialType": "MATERIAL_ELEM_CRYSTAL",
+    "nameTextMapHash": 2724676020,
+    "playGainEffect": true,
+    "rank": 420001,
+    "specialDescTextMapHash": 2868533681,
+    "stackLimit": 2000,
+    "typeDescTextMapHash": 4135494070
+  },
+  {
+    "descTextMapHash": 361570373,
+    "destroyRule": "DESTROY_RETURN_MATERIAL",
+    "effectDescTextMapHash": 1682254159,
+    "gadgetId": 70540030,
+    "icon": "UI_ItemIcon_101004",
+    "id": 101004,
+    "interactionTitleTextMapHash": 4054585519,
+    "isSplitDrop": true,
+    "itemType": "ITEM_MATERIAL",
+    "itemUse": [
+      {
+        "useParam": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          ""
+        ]
+      }
+    ],
+    "materialType": "MATERIAL_EXCHANGE",
+    "nameTextMapHash": 2057452708,
+    "rank": 301,
+    "specialDescTextMapHash": 822444321,
+    "stackLimit": 99999,
+    "typeDescTextMapHash": 2180610414,
+    "weight": 1
   }
 ]

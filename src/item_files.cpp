@@ -870,8 +870,8 @@ namespace ItemFiles {
 		if (!rows.is_array()) return std::string();
 		std::vector<std::string> keys;
 		if (name == GameTables::GADGETS) keys = { "id", "type", "jsonName" };
-		else if (name == GameTables::GATHERS) keys = { "gadgetId", "itemId", "pointType" };
-		else if (name == GameTables::MATERIALS) keys = { "id", "itemType", "materialType" };
+		else if (name == GameTables::GATHERS) keys = { "gadgetId", "itemId", "pointType", "refreshId" };
+		else if (name == GameTables::MATERIALS) keys = { "id", "itemType", "materialType", "rank" };
 		else return std::string();
 		ordered out = ordered::array();
 		for (const json& row : rows) {

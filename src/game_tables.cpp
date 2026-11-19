@@ -64,17 +64,20 @@ namespace GameTables {
 				Gather g;
 				if (!row.is_object() || !id(row, "gadgetId", g.gadget) || !id(row, "itemId", g.item)) continue;
 				id(row, "pointType", g.pointType);
+				id(row, "refreshId", g.refresh);
 				m_gathers.push_back(g);
 			}
 			std::stable_sort(m_gathers.begin(), m_gathers.end(), [](const Gather& a, const Gather& b) { return a.gadget < b.gadget; });
 			m_gathers.shrink_to_fit();
 		} else {
 			m_materials.clear();
+			m_knowsRanks = false;
 			for (const json& row : rows) {
 				MaterialRow m;
 				if (!row.is_object() || !id(row, "id", m.id)) continue;
 				m.itemType = word(text(row, "itemType"));
 				m.materialType = word(text(row, "materialType"));
+				m_knowsRanks |= id(row, "rank", m.rank);
 				m_materials.push_back(m);
 			}
 			std::sort(m_materials.begin(), m_materials.end(), [](const MaterialRow& a, const MaterialRow& b) { return a.id < b.id; });
@@ -98,7 +101,15 @@ namespace GameTables {
 		out.id = id;
 		out.itemType = wordAt(found->itemType);
 		out.materialType = wordAt(found->materialType);
+		out.rank = found->rank;
 		return true;
+	}
+
+	uint32_t Tables::refreshOf(uint32_t item) const {
+		for (const Gather& g : m_gathers)
+			if (g.item == item && g.refresh)
+				return g.refresh;
+		return 0;
 	}
 
 	std::vector<Gather> Tables::gathers(uint32_t gadget) const {
