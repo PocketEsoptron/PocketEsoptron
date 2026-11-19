@@ -7,6 +7,7 @@
 #include "net.hpp"
 #include "game_tables.hpp"
 #include "packets/learner.hpp"
+#include "packets/links.hpp"
 #include "packets/scene.hpp"
 #include <algorithm>
 #include <atomic>
@@ -885,7 +886,7 @@ namespace ItemFiles {
 	}
 
 	// game/: the tables from AnimeGameData, the published pack's when one doesn't come,
-	// and the ids and formulas this build ships
+	// and the ids, formulas and links this build ships
 	static bool writeGame(const std::string& publishedRaw, const fs::path& folder, bool& kept) {
 		kept = false;
 		std::map<std::string, std::string> published;
@@ -912,7 +913,8 @@ namespace ItemFiles {
 			if (!Files::writeFile(folder / fs::u8path(name), trimmed)) return false;
 		}
 		return Files::writeFile(folder / fs::u8path(GameTables::LEARNED), Learner::ToJson(Learner::Shipped()))
-			&& Files::writeFile(folder / fs::u8path(GameTables::SCENES), Scene::ToJson(Scene::Shipped()));
+			&& Files::writeFile(folder / fs::u8path(GameTables::SCENES), Scene::ToJson(Scene::Shipped()))
+			&& Files::writeFile(folder / fs::u8path(GameTables::LINKS), Links::KnownToJson(Links::Shipped()));
 	}
 
 	// Which appsample point each HoYoLAB point is, for showing the comments people left there.

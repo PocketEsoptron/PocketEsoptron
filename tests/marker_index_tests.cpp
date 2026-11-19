@@ -4,8 +4,7 @@
 #include <unordered_set>
 #include <vector>
 #include <catch2/catch_test_macros.hpp>
-#include <nlohmann/json.hpp>
-#include "files.hpp"
+#include "installed_pack.hpp"
 #include "item_files.hpp"
 #include "marker_index.hpp"
 #include "packets/learner.hpp"
@@ -32,18 +31,6 @@ namespace {
     }
 
     bool isChest(uint32_t gadget) { return gadget / 1000 == 70211 || gadget == 70210063; }
-
-    // the pack the overlay in build\Clean uses, only on the PC it was downloaded on
-    std::shared_ptr<const ItemCatalog::Catalog> installedPack() {
-        std::filesystem::path file = std::filesystem::path(__FILE__).parent_path().parent_path() / "build" / "Clean" / "items" / "items.pack";
-        std::string text = Files::readText(file);
-        size_t line = text.find('\n');
-        if (line == std::string::npos)
-            return nullptr;
-        nlohmann::json meta = nlohmann::json::parse(text.substr(0, line), nullptr, false);
-        std::string problem;
-        return ItemFiles::open(text.substr(line + 1), meta, nullptr, problem);
-    }
 }
 
 TEST_CASE("Every point of the cut is the nearest at its own place", "[marker_index]") {

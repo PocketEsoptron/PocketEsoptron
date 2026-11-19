@@ -10,6 +10,7 @@
 #include "item_files.hpp"
 #include "packets/learner.hpp"
 #include "packets/learning.hpp"
+#include "packets/links.hpp"
 #include "packets/scene.hpp"
 #include "recorded_messages.hpp"
 
@@ -41,6 +42,7 @@ namespace {
             REQUIRE(Files::writeFile(folder / "game" / "materials.json", ItemFiles::trimGameTable(GameTables::MATERIALS, table("MaterialExcelConfigData.json"))));
             REQUIRE(Files::writeFile(folder / "game" / "learned-messages.json", Learner::ToJson(Learner::Shipped())));
             REQUIRE(Files::writeFile(folder / "game" / "scenes.json", Scene::ToJson(Scene::Shipped())));
+            REQUIRE(Files::writeFile(folder / "game" / "links.json", Links::KnownToJson(Links::Shipped())));
         }
         std::string raw;
         bool packed = ItemFiles::pack(folder, raw);
@@ -114,6 +116,9 @@ TEST_CASE("A pack with game/ gives the tables, the ids and the formulas", "[game
     CHECK(formulas[0].map == 2);
     CHECK(formulas[0].x0 == Scene::Shipped()[0].x0);
     CHECK(formulas[0].y0 == Scene::Shipped()[0].y0);
+    Links::Known links;
+    REQUIRE(Links::KnownFromJson(game.links, links));
+    CHECK(links == Links::Shipped());
     WARN("game tables in memory: " << game.bytes() << " bytes");
 }
 
@@ -123,6 +128,7 @@ TEST_CASE("A pack without game/ loads with empty tables and no released ids", "[
     CHECK(catalog->game.gadgetCount() == 0);
     CHECK(catalog->game.scenes.empty());
     CHECK(catalog->game.learned.empty());
+    CHECK(catalog->game.links.empty());
     CHECK(Learning::Released(catalog.get()).empty());
     CHECK(Learning::Released(nullptr).empty());
 }

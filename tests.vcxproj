@@ -188,6 +188,7 @@
     <ClCompile Include="src\packets\learner.cpp" />
     <ClCompile Include="src\packets\learning.cpp" />
     <ClCompile Include="src\packets\world.cpp" />
+    <ClCompile Include="src\packets\links.cpp" />
     <ClCompile Include="src\packets\scene.cpp" />
     <ClCompile Include="src\packets\messages.cpp" />
     <ClCompile Include="src\packets\packet_capture.cpp" />
@@ -232,6 +233,7 @@
     <ClCompile Include="tests\learner_tests.cpp" />
     <ClCompile Include="tests\world_tests.cpp" />
     <ClCompile Include="tests\marker_index_tests.cpp" />
+    <ClCompile Include="tests\links_tests.cpp" />
     <ClCompile Include="tests\game_tables_tests.cpp" />
     <ClCompile Include="tests\regrow_tests.cpp" />
     <ClCompile Include="tests\lua_functions_tests.cpp" />
@@ -305,6 +307,7 @@
     <ClInclude Include="src\packets\learner.hpp" />
     <ClInclude Include="src\packets\learning.hpp" />
     <ClInclude Include="src\packets\world.hpp" />
+    <ClInclude Include="src\packets\links.hpp" />
     <ClInclude Include="src\packets\scene.hpp" />
     <ClInclude Include="src\packets\messages.hpp" />
     <ClInclude Include="src\packets\packet_capture.hpp" />
@@ -322,6 +325,7 @@
     <ClInclude Include="tests\test_map.hpp" />
     <ClInclude Include="tests\map_screen.hpp" />
     <ClInclude Include="tests\recorded_messages.hpp" />
+    <ClInclude Include="tests\installed_pack.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

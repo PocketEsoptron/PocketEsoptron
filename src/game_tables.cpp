@@ -37,6 +37,10 @@ namespace GameTables {
 			scenes = data;
 			return true;
 		}
+		if (name == LINKS) {
+			links = data;
+			return true;
+		}
 		if (name != GADGETS && name != GATHERS && name != MATERIALS) return false;
 		json rows = json::parse(data, nullptr, false);
 		if (!rows.is_array()) return false;
@@ -122,6 +126,7 @@ namespace GameTables {
 		size_t words = 0;
 		for (const std::string& w : m_words) words += sizeof(std::string) + w.capacity();
 		return m_gadgets.capacity() * sizeof(GadgetRow) + m_gathers.capacity() * sizeof(Gather)
-			+ m_materials.capacity() * sizeof(MaterialRow) + m_names.capacity() + words + learned.capacity() + scenes.capacity();
+			+ m_materials.capacity() * sizeof(MaterialRow) + m_names.capacity() + words + learned.capacity() + scenes.capacity()
+			+ links.capacity();
 	}
 }

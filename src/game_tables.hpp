@@ -5,14 +5,15 @@
 #include <vector>
 
 // The game's own tables, trimmed to the fields the overlay reads, plus the
-// message ids the learner ships and the map formulas, as the items pack has
-// them under game/:
+// message ids the learner ships, the map formulas and the map item links, as
+// the items pack has them under game/:
 //
 //   game/gadgets.json            [{id, type, jsonName}], from GadgetExcelConfigData
 //   game/gathers.json            [{gadgetId, itemId, pointType, refreshId}], from GatherExcelConfigData
 //   game/materials.json          [{id, itemType, materialType, rank}], from MaterialExcelConfigData
 //   game/learned-messages.json   Learner::ToJson of the shipped ids
 //   game/scenes.json             [{map, xx, xz, x0, yx, yz, y0}], Scene::Formula
+//   game/links.json              [{gadget, type}], Links::KnownToJson of the shipped links
 // The tables keep AnimeGameData's key names. A field the game leaves empty is
 // missing (a gadget without a jsonName).
 
@@ -23,6 +24,7 @@ namespace GameTables {
 	inline const std::string MATERIALS = "game/materials.json";
 	inline const std::string LEARNED = "game/learned-messages.json";
 	inline const std::string SCENES = "game/scenes.json";
+	inline const std::string LINKS = "game/links.json";
 
 	struct Gadget {
 		uint32_t id = 0;
@@ -59,7 +61,7 @@ namespace GameTables {
 		size_t bytes() const;
 
 		// the files' text, empty when the pack has none
-		std::string learned, scenes;
+		std::string learned, scenes, links;
 
 		// one game/ file of a pack; false for a name that isn't one, or a table that doesn't read
 		bool read(const std::string& name, std::string_view data);

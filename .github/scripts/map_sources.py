@@ -2,8 +2,8 @@
 # so the hourly run only builds the part whose sources changed. Each hash
 # covers only the fields the builders read (src/map_data.cpp makePlan,
 # src/item_files.cpp write and trimPoint, src/appsample.cpp decode). The game
-# part is the ETags of the game's tables and the files with the shipped ids and
-# formulas (src/item_files.cpp writeGame); when the tables don't answer it's
+# part is the ETags of the game's tables and the files with the shipped ids,
+# formulas and links (src/item_files.cpp writeGame); when the tables don't answer it's
 # left as published, the builder keeps the published tables then.
 #
 #   python map_sources.py fetch <out file>
@@ -31,7 +31,7 @@ STATIC_API = "https://sg-public-api-static.hoyolab.com/common/map_user/ys_obc"
 APPSAMPLE = "https://game-data.lemonapi.com/gim/markers_all.v5.compressed.json"
 GAME_TABLES = "https://gitlab.com/Dimbreath/animegamedata2/-/raw/main/ExcelBinOutput/"
 GAME_FILES = ["GadgetExcelConfigData.json", "GatherExcelConfigData.json", "MaterialExcelConfigData.json"]
-SHIPPED = ["src/packets/learner.cpp", "src/packets/scene.cpp"]
+SHIPPED = ["src/packets/learner.cpp", "src/packets/scene.cpp", "src/packets/links.cpp"]
 HEADERS = {"Origin": "https://act.hoyolab.com", "Referer": "https://act.hoyolab.com/", "User-Agent": "genshin-overlay"}
 PARTS = ["map", "items", "appsample", "game"]
 
