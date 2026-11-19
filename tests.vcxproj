@@ -189,6 +189,7 @@
     <ClCompile Include="src\packets\learning.cpp" />
     <ClCompile Include="src\packets\world.cpp" />
     <ClCompile Include="src\packets\links.cpp" />
+    <ClCompile Include="src\packets\puzzles.cpp" />
     <ClCompile Include="src\packets\finds.cpp" />
     <ClCompile Include="src\packets\scene.cpp" />
     <ClCompile Include="src\packets\messages.cpp" />
@@ -310,6 +311,7 @@
     <ClInclude Include="src\packets\learning.hpp" />
     <ClInclude Include="src\packets\world.hpp" />
     <ClInclude Include="src\packets\links.hpp" />
+    <ClInclude Include="src\packets\puzzles.hpp" />
     <ClInclude Include="src\packets\finds.hpp" />
     <ClInclude Include="src\packets\scene.hpp" />
     <ClInclude Include="src\packets\messages.hpp" />

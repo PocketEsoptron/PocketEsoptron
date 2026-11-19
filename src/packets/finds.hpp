@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 #include "links.hpp"
+#include "puzzles.hpp"
 #include "world.hpp"
 
 namespace ItemCatalog { class Catalog; }
@@ -16,11 +17,11 @@ namespace MarkerIndex { class Index; }
 
 // The map items the player has just done, from what the World tells: a chest
 // opened, a pickup taken (gone with reason 2 with its item got in the same
-// moment). Only objects the World saw appear count, so nothing from before
-// the overlay listened.
+// moment) and a puzzle solved. Only objects the World saw appear count, so
+// nothing from before the overlay listened.
 
 namespace Finds {
-    enum class How { Opened, PickedUp };
+    enum class How { Opened, PickedUp, Solved };
 
     struct Found {
         How how = How::Opened;
@@ -40,6 +41,8 @@ namespace Finds {
 
     // an item got this close to a gone pickup is taken with it
     inline constexpr uint64_t SAME_MOMENT = 200;
+    // how far a puzzle's map item may sit from one of its parts
+    inline constexpr double PUZZLE_RADIUS = 12;
 
     class Finder {
     public:
@@ -55,6 +58,8 @@ namespace Finds {
         void Feed(const World::Event& event, const World::World& world, std::vector<Found>& out);
         // drops the pickups whose item can't come any more by ms
         void Settle(uint64_t ms);
+        // the puzzles the last moment finished, when no event comes after it
+        void Finish(const World::World& world, std::vector<Found>& out);
 
     private:
         struct Gone {
@@ -71,6 +76,7 @@ namespace Finds {
         bool gotItsItem(const Gone& gone, const Got& got) const;
         void gone(const World::Event& event, const World::World& world, std::vector<Found>& out);
         void got(const World::Event& event, const World::World& world, std::vector<Found>& out);
+        void solved(const std::vector<Puzzles::Solved>& solved, std::vector<Found>& out);
 
         Links::Links& m_links;
         std::shared_ptr<const ItemCatalog::Catalog> m_catalog;
@@ -81,6 +87,7 @@ namespace Finds {
         std::set<std::pair<uint32_t, uint32_t>> m_foundObjects;
         std::deque<Gone> m_waiting;
         std::deque<Got> m_got;
+        Puzzles::Tracker m_puzzles;
     };
 
     // the items pack's links (game/links.json), then the ones the build ships

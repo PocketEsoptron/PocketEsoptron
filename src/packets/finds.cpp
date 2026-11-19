@@ -27,6 +27,7 @@ namespace Finds {
         }
         m_types = m_catalog ? Links::TypesOf(*m_catalog) : Links::Types();
         m_waiting.clear();
+        m_puzzles = Puzzles::Tracker();
     }
 
     void Finder::SetDone(std::unordered_set<int32_t> done) {
@@ -38,6 +39,9 @@ namespace Finds {
         Settle(event.ms);
         if (!m_catalog)
             return;
+        std::vector<Puzzles::Solved> done;
+        m_puzzles.Feed(event, world, m_catalog->game, done);
+        solved(done, out);
         switch (event.what) {
         case World::What::Appeared:
             m_links.See(event.object, *m_index, m_catalog->game, m_types);
@@ -66,6 +70,64 @@ namespace Finds {
             m_got.pop_front();
         while (!m_waiting.empty() && m_waiting.front().ms + SAME_MOMENT < ms)
             m_waiting.pop_front();
+    }
+
+    void Finder::Finish(const World::World& world, std::vector<Found>& out) {
+        if (!m_catalog)
+            return;
+        std::vector<Puzzles::Solved> done;
+        m_puzzles.Settle(UINT64_MAX, world, m_catalog->game, done);
+        solved(done, out);
+    }
+
+    // The one map item of the puzzle's type clearly nearest to one of its parts,
+    // the parts tried in turn. Not sure when no part has one.
+    void Finder::solved(const std::vector<Puzzles::Solved>& solved, std::vector<Found>& out) {
+        for (const Puzzles::Solved& s : solved) {
+            Found found;
+            found.how = How::Solved;
+            found.ms = s.ms;
+            found.group = s.group;
+            found.type = s.type;
+            const std::unordered_set<int> types = { s.type };
+            for (const World::Object& part : s.at) {
+                int map = Links::MapOf(part.group);
+                Scene::MapPos at;
+                if (!part.hasPos || !map || !Scene::ToMap(part.pos, map, at))
+                    continue;
+                MarkerIndex::Near near = m_index->UniqueNear(types, map, at.x, at.y, PUZZLE_RADIUS, Links::MARGIN,
+                    MarkerIndex::Floor::Any(), &m_taken);
+                if (!near.nearest)
+                    continue;
+                if (!found.map) {
+                    found.gadget = part.gadget;
+                    found.config = part.config;
+                    found.map = map;
+                    found.x = at.x;
+                    found.y = at.y;
+                }
+                if (near.unique) {
+                    found.gadget = part.gadget;
+                    found.config = part.config;
+                    found.map = map;
+                    found.x = at.x;
+                    found.y = at.y;
+                    found.point = near.nearest->id;
+                    found.candidates.clear();
+                    break;
+                }
+                for (const ItemCatalog::Point* p : { near.nearest, near.second })
+                    if (p && std::find(found.candidates.begin(), found.candidates.end(), p->id) == found.candidates.end())
+                        found.candidates.push_back(p->id);
+            }
+            if (!found.map)
+                continue;
+            if (found.point) {
+                m_found.insert(found.point);
+                m_taken.insert(found.point);
+            }
+            out.push_back(std::move(found));
+        }
     }
 
     static bool sameMoment(uint64_t a, uint64_t b) {
@@ -242,7 +304,11 @@ namespace Finds {
     }
 
     static const char* howName(How how) {
-        return how == How::Opened ? "opened" : "picked up";
+        switch (how) {
+        case How::Opened: return "opened";
+        case How::PickedUp: return "picked up";
+        default: return "solved";
+        }
     }
 
     void Start(const std::filesystem::path& folder) {

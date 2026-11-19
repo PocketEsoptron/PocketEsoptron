@@ -66,6 +66,7 @@ namespace {
             }
             events.clear();
         }
+        finder.Finish(world, played.found);
         return played;
     }
 
@@ -128,22 +129,23 @@ TEST_CASE("The finds on every recording", "[finds]") {
     auto catalog = installedPack();
     if (recordings.empty() || !catalog || !catalog->game.gadgetCount())
         SKIP("no recordings or no items pack with the game's tables on this PC");
-    // the old found list (a473787), checked on HoYoLAB, and the chests and pickups of the 2026-11-21 and
+    // the old found list (a473787) and the puzzles, each checked on HoYoLAB, and the 2026-11-21 and
     // 2026-11-22 plays, each ticked on the map right after it was done. The 0 on 11-22 is a Wooden Mora
     // Chest with two next to it, both ticked
     const std::map<std::string, std::vector<int32_t>> right = {
         { "2026-10-14_21-47", { 4831 } },
         { "2026-10-17_18-39", { 1305 } },
         { "2026-10-18_pickups2-check", { 53912, 29159 } },
-        { "2026-10-18_puzzles", { 31126, 30581, 31326 } },
-        { "2026-10-19_puzzles", { 2828, 2829, 2795, 2816, 4739, 29189, 29190, 29142 } },
+        { "2026-10-18_puzzles", { 29061, 29109, 29065, 29064, 29111, 29009, 29010, 29008, 31126, 33000, 30581, 31326,
+                                  29126, 36953, 42155 } },
+        { "2026-10-19_puzzles", { 2828, 2829, 2795, 2816, 4739, 29189, 32803, 29190, 29342, 81509, 29142 } },
         { "2026-10-19_puzzles-live", { 72367 } },
-        { "2026-10-19_puzzles-live-2", { 73946 } },
+        { "2026-10-19_puzzles-live-2", { 72279, 73946 } },
         { "2026-10-19_stonepile", { 32859 } },
-        { "2026-11-21_a-s4-puzzles", { 65434, 64877, 64874, 64804, 64994, 64949, 64971 } },
-        { "2026-11-22_play", { 0, 65365, 64803, 64802, 64856, 64916, 64875, 64798, 65450, 64799, 64876, 64800, 64921, 65435,
-                               65502, 64868, 65436, 64969, 64898, 64805, 64970, 64806, 65367, 65368, 104473, 101909, 100876,
-                               100812, 104451, 101840, 101839, 101838, 101911, 101910 } },
+        { "2026-11-21_a-s4-puzzles", { 65434, 64877, 64874, 65081, 64804, 65046, 65047, 64994, 64949, 64971, 65069 } },
+        { "2026-11-22_play", { 0, 65365, 64803, 64802, 64856, 64916, 64875, 65022, 64798, 65450, 64799, 64876, 64800, 64921,
+                               65435, 65502, 64868, 65436, 64969, 65048, 64898, 64805, 64970, 64806, 65367, 65368, 104473,
+                               104610, 101909, 100876, 100812, 104451, 101840, 101839, 101838, 101911, 101910 } },
     };
     for (const std::filesystem::path& recording : recordings) {
         auto it = right.find(recording.filename().string());
