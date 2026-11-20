@@ -223,6 +223,7 @@ namespace LuaFunctions {
 		global("GetItemIcon", MapInfo, GetItemIcon);
 		global("GetGameTraffic", None, GetGameTraffic);
 		global("GetGameServer", Permission::GameServer, GetGameServer);
+		global("GetFinds", MapInfo, GetFinds);
 
 		// the player's logins, each site's account permission checked inside
 		global("GetAccount", None, GetAccount);
@@ -2836,6 +2837,50 @@ namespace LuaFunctions {
 	sol::object GetGameServer(sol::this_state state)
 	{
 		return gameServerTable(Settings::gameServer, (int64_t)std::time(nullptr), state);
+	}
+
+	static const char* howName(Finds::How how) {
+		switch (how) {
+		case Finds::How::Opened: return "opened";
+		case Finds::How::PickedUp: return "picked_up";
+		default: return "solved";
+		}
+	}
+
+	static std::string objectKey(uint32_t group, uint32_t config) {
+		return std::to_string(group) + "/" + std::to_string(config);
+	}
+
+	sol::table findsTable(uint64_t after, sol::state_view lua)
+	{
+		std::vector<Finds::Numbered> finds = Finds::Recent(after);
+		sol::table list = lua.create_table((int)finds.size(), 0);
+		int i = 1;
+		for (const Finds::Numbered& n : finds) {
+			const Finds::Found& f = n.found;
+			std::string object = f.how == Finds::How::Solved ? "" : objectKey(f.group, f.config);
+			sol::table each = lua.create_table_with("id", n.id, "how", howName(f.how), "type", f.type,
+				"map", f.map, "x", f.x, "y", f.y, "object", object);
+			if (f.point) {
+				each["point"] = f.point;
+			} else {
+				sol::table maybe = lua.create_table((int)f.candidates.size(), 0);
+				int c = 1;
+				for (int32_t id : f.candidates) maybe[c++] = id;
+				each["maybe"] = maybe;
+				sol::table rivals = lua.create_table((int)f.rivals.size(), 0);
+				int r = 1;
+				for (auto& [group, config] : f.rivals) rivals[r++] = objectKey(group, config);
+				each["rivals"] = rivals;
+			}
+			list[i++] = each;
+		}
+		return list;
+	}
+
+	sol::table GetFinds(sol::optional<uint64_t> after, sol::this_state state)
+	{
+		return findsTable(after.value_or(0), state);
 	}
 
 	static Permission accountPermission(Accounts::Site site) {

@@ -133,6 +133,16 @@ namespace LuaFunctions {
     // at a Unix second. The trigger's changed is "server" or "reset" (a
     // new game day).
     sol::object gameServerTable(const std::string& key, int64_t now, sol::state_view lua);
+    // GetFinds(after), with Map info: the map items the player did while the
+    // overlay read the game's traffic, the newest 256 of the run after the id
+    // given (all of them without one), oldest first. Each { id, how, type, map,
+    // x, y, object } and point, or when it can't tell which: maybe, the ones it
+    // can be, nearest first, and rivals, the objects about as near whose map
+    // item it may be instead. how is opened, picked_up or solved. object is the
+    // game's object as "group/config", "" for a puzzle. Ids go up, also from
+    // one run to the next. The Finds trigger's changed is "new".
+    sol::table GetFinds(sol::optional<uint64_t> after, sol::this_state state);
+    sol::table findsTable(uint64_t after, sol::state_view lua);
     // GetAccount("hoyolab_map" or "appsample"): { site, state, problem, account }.
     // state is logged_out, window_open, logged_in, needs_login or captcha,
     // problem what went wrong last for the player, "" when nothing did.

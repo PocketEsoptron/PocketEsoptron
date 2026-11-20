@@ -17,7 +17,7 @@ namespace Triggers {
 	using Extensions::Extension;
 	using Permission = Extensions::ExtensionPermissionTypes;
 
-	enum class Kind { Screens, ScreenPicture, MapView, Player, Items, GameTraffic, GameServer, Account, Page, Setting, Permission, Look };
+	enum class Kind { Screens, ScreenPicture, MapView, Player, Items, Finds, GameTraffic, GameServer, Account, Page, Setting, Permission, Look };
 
 	static const std::vector<std::pair<std::string, Kind>> kinds = {
 		{ "Screens", Kind::Screens },
@@ -25,6 +25,7 @@ namespace Triggers {
 		{ "MapView", Kind::MapView },
 		{ "Player", Kind::Player },
 		{ "Items", Kind::Items },
+		{ "Finds", Kind::Finds },
 		{ "GameTraffic", Kind::GameTraffic },
 		{ "GameServer", Kind::GameServer },
 		{ "Account", Kind::Account },
@@ -56,6 +57,7 @@ namespace Triggers {
 		case Kind::MapView: return { "view", "floor" };
 		case Kind::Player: return { "found", "lost", "moved" };
 		case Kind::Items: return { "list", "loading", "auto" };
+		case Kind::Finds: return { "new" };
 		case Kind::GameTraffic: return { "on", "state" };
 		case Kind::GameServer: return { "server", "reset" };
 		case Kind::Account: return { "hoyolab_map", "appsample" };
@@ -86,9 +88,9 @@ namespace Triggers {
 	static std::vector<Trigger> triggers;
 	static int nextId = 1;
 
-	// the map, the player and the items are what Map info lets it see
+	// the map, the player, the items and the finds are what Map info lets it see
 	static bool needsMapInfo(Kind kind) {
-		return kind == Kind::MapView || kind == Kind::Player || kind == Kind::Items;
+		return kind == Kind::MapView || kind == Kind::Player || kind == Kind::Items || kind == Kind::Finds;
 	}
 
 	static Permission needs(Kind kind) {
@@ -192,6 +194,9 @@ namespace Triggers {
 				std::to_string(items.percent) + " " + items.built + " " + (items.started ? "1" : "0") + (items.checking ? "1" : "0");
 			break;
 		}
+		case Kind::Finds:
+			parts["new"] = std::to_string(now.lastFind);
+			break;
 		case Kind::GameTraffic:
 			parts["on"] = now.trafficOn ? "1" : "0";
 			parts["state"] = std::string(GameTraffic::StateCode(now.traffic)) + " " + GameTraffic::ReasonCode(now.traffic);
@@ -297,6 +302,7 @@ namespace Triggers {
 		case Kind::MapView: return LuaFunctions::mapViewTable(now.view, lua);
 		case Kind::Player: return LuaFunctions::playerTable(now.player, lua);
 		case Kind::Items: return LuaFunctions::Items::table(now.itemsVersion, now.items, lua);
+		case Kind::Finds: return LuaFunctions::findsTable(0, lua);
 		case Kind::GameTraffic: return LuaFunctions::gameTrafficTable(now.trafficOn, now.traffic, lua);
 		case Kind::GameServer: return LuaFunctions::gameServerTable(now.gameServer, now.time, lua);
 		case Kind::Account: {
@@ -398,6 +404,7 @@ namespace Triggers {
 		if (!Overlay::PickerBox(now.picker)) now.picker = {};
 		now.itemsVersion = ItemCatalog::version();
 		now.autoTypes = Finds::AutoTypesVersion();
+		now.lastFind = Finds::LastId();
 		now.items = ItemFiles::GetStatus();
 		now.trafficOn = Settings::readGameTraffic;
 		now.traffic = GameTraffic::GetStatus();

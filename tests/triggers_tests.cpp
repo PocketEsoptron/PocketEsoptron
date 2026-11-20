@@ -217,6 +217,24 @@ TEST_CASE("Items runs on a new list, on new auto types and while the list loads"
     TestExtension::unloadAll();
 }
 
+TEST_CASE("Finds runs on a new find", "[triggers]") {
+    Extensions::Extension* ext = counting("triggers_finds", "Finds Finds:new");
+    REQUIRE(ext != nullptr);
+    Extensions::allow(*ext, Permission::MapInfo);
+    Triggers::State state;
+    Triggers::check(state);
+    Triggers::check(state);
+    CHECK(runs(ext, "Finds") == 0);
+    state.lastFind = 6;
+    Triggers::check(state);
+    CHECK(runs(ext, "Finds") == 1);
+    CHECK(changed(ext, "Finds") == "new");
+    CHECK(runs(ext, "Finds:new") == 1);
+    Triggers::check(state);
+    CHECK(runs(ext, "Finds") == 1);
+    TestExtension::unloadAll();
+}
+
 TEST_CASE("GameTraffic runs when it's turned on and when its state changes", "[triggers]") {
     Extensions::Extension* ext = counting("triggers_traffic", "GameTraffic GameTraffic:state");
     REQUIRE(ext != nullptr);

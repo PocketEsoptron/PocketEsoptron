@@ -29,6 +29,7 @@ namespace MarkerIndex {
         int64_t y0 = int64_t(std::floor((y - reach) / CELL)), y1 = int64_t(std::floor((y + reach) / CELL));
         double best = INFINITY, next = INFINITY;
         const ItemCatalog::Point *first = nullptr, *second = nullptr;
+        std::vector<std::pair<double, const ItemCatalog::Point*>> within;
         for (int64_t cx = x0; cx <= x1; cx++)
             for (int64_t cy = y0; cy <= y1; cy++) {
                 uint64_t k = key(map, cx, cy);
@@ -44,6 +45,7 @@ namespace MarkerIndex {
                     double d = std::hypot(p.x - x, p.y - y);
                     if (d > reach)
                         continue;
+                    within.push_back({ d, &p });
                     if (d < best) {
                         next = best;
                         second = first;
@@ -61,6 +63,15 @@ namespace MarkerIndex {
             out.unique = !second || next > std::max(2 * best, best + margin);
             out.second = second;
             out.secondDistance = second ? next : 0;
+            if (!out.unique) {
+                double clear = std::max(2 * best, best + margin);
+                std::sort(within.begin(), within.end(), [](const auto& a, const auto& b) {
+                    return a.first < b.first || (a.first == b.first && a.second->id < b.second->id);
+                });
+                for (auto& [d, p] : within)
+                    if (d <= clear)
+                        out.close.push_back(p);
+            }
         }
         return out;
     }

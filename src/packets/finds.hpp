@@ -35,8 +35,11 @@ namespace Finds {
         int type = 0;
         // the map item done, 0 when more than one could be
         int32_t point = 0;
-        // when point is 0: the ones that could be
+        // when point is 0: the ones that could be, nearest first
         std::vector<int32_t> candidates;
+        // when point is 0: the other objects of the types (group, config) about as
+        // near, whose map item it may be
+        std::vector<std::pair<uint32_t, uint32_t>> rivals;
     };
 
     // an item got this close to a gone pickup is taken with it
@@ -109,6 +112,19 @@ namespace Finds {
     using Listener = std::function<void(const Found&)>;
     extern int AddListener(Listener listener);
     extern void RemoveListener(int id);
+
+    // A find of the running Finder and its id. Ids go up, also from one run to
+    // the next, so an extension can keep the last one it took.
+    struct Numbered {
+        uint64_t id = 0;
+        Found found;
+    };
+    // how many of the newest finds are kept for Recent
+    inline constexpr size_t RECENT = 256;
+    // the kept finds after the id, oldest first
+    extern std::vector<Numbered> Recent(uint64_t after);
+    // the newest find's id, 0 before the first of the run
+    extern uint64_t LastId();
 
     // AutoTypes of the items pack in use and of what the running Finder learned,
     // none while the game's traffic isn't read or the pack has no game tables,

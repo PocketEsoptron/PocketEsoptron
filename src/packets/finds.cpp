@@ -117,8 +117,8 @@ namespace Finds {
                     found.candidates.clear();
                     break;
                 }
-                for (const ItemCatalog::Point* p : { near.nearest, near.second })
-                    if (p && std::find(found.candidates.begin(), found.candidates.end(), p->id) == found.candidates.end())
+                for (const ItemCatalog::Point* p : near.close)
+                    if (std::find(found.candidates.begin(), found.candidates.end(), p->id) == found.candidates.end())
                         found.candidates.push_back(p->id);
             }
             if (!found.map)
@@ -210,27 +210,26 @@ namespace Finds {
 
         const ItemCatalog::Point& point = *near.nearest;
         double clear = std::max(2 * near.distance, near.distance + Links::MARGIN);
-        bool contested = false;
         for (const auto& [entity, other] : world.Objects()) {
             if (entity == object.entity || (other.group == object.group && other.config == object.config) || !other.hasPos
                 || m_foundObjects.count({ other.group, other.config }) || !types.count(m_links.TypeOf(other.gadget))
                 || Links::MapOf(other.group) != map)
                 continue;
             Scene::MapPos there;
-            if (Scene::ToMap(other.pos, map, there) && std::hypot(there.x - point.x, there.y - point.y) < clear) {
-                contested = true;
-                break;
-            }
+            if (Scene::ToMap(other.pos, map, there) && std::hypot(there.x - point.x, there.y - point.y) < clear
+                && std::find(out.rivals.begin(), out.rivals.end(), std::make_pair(other.group, other.config)) == out.rivals.end())
+                out.rivals.push_back({ other.group, other.config });
         }
-        if (near.unique && !contested) {
+        if (near.unique && out.rivals.empty()) {
             out.point = point.id;
             m_found.insert(point.id);
             m_taken.insert(point.id);
             return true;
         }
-        out.candidates.push_back(point.id);
-        if (!near.unique && near.second && near.secondDistance <= Links::RADIUS)
-            out.candidates.push_back(near.second->id);
+        if (near.unique)
+            out.candidates.push_back(point.id);
+        for (const ItemCatalog::Point* p : near.close)
+            out.candidates.push_back(p->id);
         return true;
     }
 
@@ -293,6 +292,37 @@ namespace Finds {
     static std::mutex listenersMutex;
     static std::vector<std::pair<int, Listener>> listeners;
     static int nextListener = 1;
+
+    static std::mutex recentMutex;
+    static std::deque<Numbered> recent;
+    static uint64_t nextId = 0;
+
+    static void keep(const std::vector<Found>& found) {
+        std::lock_guard lock(recentMutex);
+        // a run's first id is past any id an earlier run could have given
+        if (!nextId)
+            nextId = uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count()) * 1000;
+        for (const Found& f : found) {
+            recent.push_back({ ++nextId, f });
+            if (recent.size() > RECENT)
+                recent.pop_front();
+        }
+    }
+
+    std::vector<Numbered> Recent(uint64_t after) {
+        std::lock_guard lock(recentMutex);
+        std::vector<Numbered> out;
+        for (const Numbered& n : recent)
+            if (n.id > after)
+                out.push_back(n);
+        return out;
+    }
+
+    uint64_t LastId() {
+        std::lock_guard lock(recentMutex);
+        return recent.empty() ? 0 : recent.back().id;
+    }
 
     // votes are saved at most this often, and when a link changes
     static constexpr auto SAVE_EVERY = std::chrono::minutes(1);
@@ -411,6 +441,7 @@ namespace Finds {
                 }
                 std::cout << " (type " << f.type << ")" << std::endl;
             }
+            keep(found);
             std::vector<std::pair<int, Listener>> now;
             {
                 std::lock_guard lock(listenersMutex);

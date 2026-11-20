@@ -29,6 +29,8 @@ namespace MarkerIndex {
         double secondDistance = 0;
         // nearest is set and the second is clearly further: past max(2 d, d + margin)
         bool unique = false;
+        // when not unique: every one not clearly further than nearest, nearest first
+        std::vector<const ItemCatalog::Point*> close;
     };
 
     class Index {

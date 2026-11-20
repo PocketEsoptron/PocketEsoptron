@@ -14,7 +14,7 @@
 
 // AddTrigger(name, function, only): the function runs once each time its
 // topic changes, with the table the topic's call gives (GetScreens,
-// GetMapView, GetPlayer, GetItems, GetGameTraffic, GetGameServer, GetAccount...) and what changed. With only, it runs
+// GetMapView, GetPlayer, GetItems, GetFinds, GetGameTraffic, GetGameServer, GetAccount...) and what changed. With only, it runs
 // only when that is what changed. Nothing runs for the state at the start.
 
 namespace Triggers {
@@ -44,6 +44,8 @@ namespace Triggers {
         uint64_t itemsVersion = 0;
         uint64_t autoTypes = 0;
         ItemFiles::Status items;
+        // the newest find's id, what the Finds trigger watches
+        uint64_t lastFind = 0;
         // what GetGameTraffic gives
         bool trafficOn = false;
         GameTraffic::Status traffic;

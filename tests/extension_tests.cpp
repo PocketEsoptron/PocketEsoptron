@@ -171,6 +171,7 @@ TEST_CASE("every function an extension gets goes through the permission check") 
     CHECK(needs("RegisterKeybind") == Permission::None);
     CHECK(needs("DrawText") == Permission::DisplayOverlay);
     CHECK(needs("GetItemTypes") == Permission::MapInfo);
+    CHECK(needs("GetFinds") == Permission::MapInfo);
     CHECK(needs("CompareImages") == Permission::None);
     CHECK(needs("ReadFile") == Permission::InternalReadfile);
     CHECK(needs("WriteFile") == Permission::InternalWritefile);

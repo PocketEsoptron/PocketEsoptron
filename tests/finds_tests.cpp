@@ -157,6 +157,28 @@ TEST_CASE("The finds on every recording", "[finds]") {
     }
 }
 
+TEST_CASE("A Wooden Mora Chest opened next to another gives both map items and the other chest as its rival", "[finds]") {
+    std::filesystem::path recording;
+    for (const std::filesystem::path& each : RecordedMessages::recordings())
+        if (each.filename() == "2026-11-22_play")
+            recording = each;
+    auto catalog = installedPack();
+    if (recording.empty() || !catalog || !catalog->game.gadgetCount())
+        SKIP("no 2026-11-22_play recording or no items pack with the game's tables on this PC");
+    std::vector<Finds::Found> found = play(recording / "messages.bin", catalog, Learner::Shipped()).found;
+    REQUIRE(found.size() >= 2);
+    // 67006 was opened first while 67005 stood about as near to 65365
+    CHECK(found[0].point == 0);
+    CHECK(found[0].type == 129);
+    CHECK(found[0].group == 133114067);
+    CHECK(found[0].config == 67006);
+    CHECK(found[0].candidates == std::vector<int32_t>{ 65365, 65366 });
+    CHECK(found[0].rivals == std::vector<std::pair<uint32_t, uint32_t>>{ { 133114067, 67005 } });
+    CHECK(found[1].point == 65365);
+    CHECK(found[1].config == 67005);
+    CHECK(found[1].rivals.empty());
+}
+
 namespace {
     std::filesystem::path tempFolder(const std::string& name) {
         std::filesystem::path folder = std::filesystem::temp_directory_path()
