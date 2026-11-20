@@ -40,6 +40,9 @@ namespace Links {
     // Puzzle Chest groups
     extern Types TypesOf(const ItemCatalog::Catalog& catalog);
 
+    // HoYoLAB's types of the chests a puzzle hides, and the Geo Sigil
+    inline constexpr int BURIED_CHEST = 69, SEALED_CHEST = 75, LIGHT_REVEALED_CHEST = 879, GEO_SIGIL = 128;
+
     // the map an object is on by its group, 0 when it isn't one the overlay knows
     extern int MapOf(uint32_t group);
 

@@ -15,7 +15,6 @@
 namespace Links {
     // HoYoLAB's groups and types
     static constexpr int CHESTS = 13, SPECIAL_ITEMS = 4, EXPERIENCE = 51, PUZZLE_CHEST = 186;
-    static constexpr int GEO_SIGIL = 128, BURIED_CHEST = 69, SEALED_CHEST = 75, LIGHT_REVEALED_CHEST = 879;
     static constexpr int LOCAL_SPECIALTIES = 10, ORES = 11, MATERIALS = 60;
     static constexpr int TEYVAT = 2;
     // a link needs this many objects on its type

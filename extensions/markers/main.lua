@@ -43,6 +43,7 @@ function Init()
         sync.accountChanged(site)
         collectedPage.accountChanged(site)
     end)
+    AddTrigger("Items", function() catalog.readAuto() end, "auto")
 end
 
 local asked = false

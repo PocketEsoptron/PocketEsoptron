@@ -9,6 +9,7 @@
 #include "../helpers.hpp"
 #include "../item_catalog.hpp"
 #include "../marker_index.hpp"
+#include "../settings.hpp"
 #include "scene.hpp"
 
 namespace Finds {
@@ -244,6 +245,14 @@ namespace Finds {
         return known;
     }
 
+    std::set<int> AutoTypes(const Links::Known& links) {
+        std::set<int> out = { Puzzles::SEELIE, Puzzles::TRIAL, Puzzles::MONUMENT, Puzzles::TORCH, Puzzles::SEEDS,
+            Links::BURIED_CHEST, Links::SEALED_CHEST, Links::LIGHT_REVEALED_CHEST };
+        for (auto& [gadget, type] : links)
+            out.insert(type);
+        return out;
+    }
+
     bool LoadVotes(const std::filesystem::path& file, Links::Links& links) {
         std::string text = Files::readText(file);
         if (text.empty() || links.FromJson(text))
@@ -288,6 +297,56 @@ namespace Finds {
     // votes are saved at most this often, and when a link changes
     static constexpr auto SAVE_EVERY = std::chrono::minutes(1);
 
+    // AutoTypesNow's: the running Finder's learned links, and the types made
+    // again when they or the items pack change
+    static std::mutex autoMutex;
+    static Links::Known autoLearned;
+    static uint64_t learnedVersion = 0, autoLearnedSeen = 0, autoCatalog = 0, autoVersion = 0;
+    static bool autoMade = false, autoTraffic = false;
+    static std::set<int> autoTypes;
+
+    static void setLearned(const Links::Links& links) {
+        std::lock_guard lock(autoMutex);
+        autoLearned = links.Learned();
+        learnedVersion++;
+    }
+
+    static void refreshAuto() {
+        uint64_t catalog = ItemCatalog::version();
+        bool traffic = Settings::readGameTraffic;
+        if (autoMade && catalog == autoCatalog && learnedVersion == autoLearnedSeen && traffic == autoTraffic)
+            return;
+        auto pack = ItemCatalog::current();
+        std::set<int> now;
+        // nothing is found without the traffic or the game's tables
+        if (traffic && pack && pack->game.gadgetCount()) {
+            Links::Known links = autoLearned;
+            for (auto& [gadget, type] : KnownLinks(pack.get()))
+                links[gadget] = type;
+            now = AutoTypes(links);
+        }
+        autoMade = true;
+        autoCatalog = catalog;
+        autoLearnedSeen = learnedVersion;
+        autoTraffic = traffic;
+        if (now != autoTypes) {
+            autoTypes = std::move(now);
+            autoVersion++;
+        }
+    }
+
+    std::set<int> AutoTypesNow() {
+        std::lock_guard lock(autoMutex);
+        refreshAuto();
+        return autoTypes;
+    }
+
+    uint64_t AutoTypesVersion() {
+        std::lock_guard lock(autoMutex);
+        refreshAuto();
+        return autoVersion;
+    }
+
     static void follow(Running& r) {
         r.followed = true;
         auto pack = ItemCatalog::current();
@@ -319,6 +378,7 @@ namespace Finds {
         running->file = folder / FILE_NAME;
         running->saves = LoadVotes(running->file, running->links);
         running->saved = std::chrono::steady_clock::now();
+        setLearned(running->links);
         worldListener = World::AddListener([](const World::Event& event) {
             std::vector<Found> found;
             {
@@ -332,6 +392,7 @@ namespace Finds {
                 r.unsaved = r.links.TakeUnsaved() || r.unsaved;
                 if (r.links.TakeChanged()) {
                     std::cout << "Map item links: " << r.links.Learned().size() << " learned" << std::endl;
+                    setLearned(r.links);
                     save(r);
                 } else if (r.unsaved && std::chrono::steady_clock::now() - r.saved >= SAVE_EVERY) {
                     save(r);

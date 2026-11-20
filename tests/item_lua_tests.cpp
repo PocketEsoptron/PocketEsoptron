@@ -86,6 +86,8 @@ TEST_CASE("extensions get the type list from the catalog in memory") {
     CHECK(lua.run<int>("groups[2].types[1].counts[2]") == 8);
     CHECK(lua.run<int>("groups[2].types[1].counts[34]") == 2);
     CHECK(lua.run<bool>("groups[2].types[1].counts[9] == nil"));
+    // none of the cut's types is found by itself
+    CHECK(lua.run<bool>("groups[2].types[1].auto == nil"));
     // a type with no points has no counts
     CHECK(lua.run<int>("groups[1].types[1].id") == 589);
     CHECK(lua.run<bool>("next(groups[1].types[1].counts) == nil"));

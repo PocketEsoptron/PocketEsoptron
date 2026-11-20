@@ -92,6 +92,9 @@ namespace Finds {
 
     // the items pack's links (game/links.json), then the ones the build ships
     extern Links::Known KnownLinks(const ItemCatalog::Catalog* catalog);
+    // the map item types found by themselves: the ones the links' gadgets are,
+    // the puzzle chests a chest can sit on, and the puzzles
+    extern std::set<int> AutoTypes(const Links::Known& links);
     // the votes of the learned file into links; a file that doesn't read is kept aside as
     // .broken, false when it couldn't be
     extern bool LoadVotes(const std::filesystem::path& file, Links::Links& links);
@@ -106,4 +109,10 @@ namespace Finds {
     using Listener = std::function<void(const Found&)>;
     extern int AddListener(Listener listener);
     extern void RemoveListener(int id);
+
+    // AutoTypes of the items pack in use and of what the running Finder learned,
+    // none while the game's traffic isn't read or the pack has no game tables,
+    // and a number that goes up each time they change
+    extern std::set<int> AutoTypesNow();
+    extern uint64_t AutoTypesVersion();
 }

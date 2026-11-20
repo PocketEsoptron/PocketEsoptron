@@ -40,8 +40,9 @@ namespace Triggers {
         RECT picker = {};
         // what GetPlayer gives, only read while a player trigger wants it
         MiniMap::Spot player;
-        // what GetItems gives
+        // what GetItems gives, and how often GetItemTypes' auto changed
         uint64_t itemsVersion = 0;
+        uint64_t autoTypes = 0;
         ItemFiles::Status items;
         // what GetGameTraffic gives
         bool trafficOn = false;

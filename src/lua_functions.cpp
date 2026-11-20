@@ -21,6 +21,7 @@
 #include "settings.hpp"
 #include "notices.hpp"
 #include "screen_pictures.hpp"
+#include "packets/finds.hpp"
 #include "packets/game_traffic.hpp"
 #include "accounts.hpp"
 #include "game_server.hpp"
@@ -2663,6 +2664,7 @@ namespace LuaFunctions {
 		sol::table types(const ItemCatalog::Catalog* catalog, sol::state_view lua) {
 			sol::table groups = lua.create_table();
 			if (!catalog) return groups;
+			std::set<int> found = Finds::AutoTypesNow();
 			int g = 1;
 			for (const auto& group : catalog->groups) {
 				sol::table types = lua.create_table((int)group.types.size(), 0);
@@ -2670,7 +2672,9 @@ namespace LuaFunctions {
 				for (const auto& type : group.types) {
 					sol::table counts = lua.create_table();
 					for (const auto& [map, n] : type.counts) counts[map] = n;
-					types[t++] = lua.create_table_with("id", type.id, "name", type.name, "counts", counts);
+					sol::table each = lua.create_table_with("id", type.id, "name", type.name, "counts", counts);
+					if (found.count(type.id)) each["auto"] = true;
+					types[t++] = each;
 				}
 				groups[g++] = lua.create_table_with("id", group.id, "name", group.name, "types", types);
 			}
@@ -2726,6 +2730,9 @@ namespace LuaFunctions {
 		return Items::table(Items::frameCatalog ? Items::frameCatalog->version : 0, ItemFiles::GetStatus(), state);
 	}
 
+	// [{ id, name, types }], each type { id, name, counts (points by map id),
+	// auto = true when the overlay finds it done by itself while it reads the
+	// game's traffic }; auto can change with the list, the Items trigger's "auto"
 	sol::object GetItemTypes(sol::this_state state) {
 		return Items::types(Items::frameCatalog.get(), state);
 	}

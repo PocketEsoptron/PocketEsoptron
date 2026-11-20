@@ -186,7 +186,7 @@ TEST_CASE("Player runs on found, lost and moved, found or lost over moved", "[tr
     TestExtension::unloadAll();
 }
 
-TEST_CASE("Items runs on a new list and while the list loads", "[triggers]") {
+TEST_CASE("Items runs on a new list, on new auto types and while the list loads", "[triggers]") {
     Extensions::Extension* ext = counting("triggers_items", "Items Items:list");
     REQUIRE(ext != nullptr);
     Extensions::allow(*ext, Permission::MapInfo);
@@ -207,6 +207,12 @@ TEST_CASE("Items runs on a new list and while the list loads", "[triggers]") {
     CHECK(runs(ext, "Items") == 2);
     CHECK(changed(ext, "Items") == "list");
     CHECK(given(ext, "Items").as<sol::table>()["version"].get<int>() == 3);
+    CHECK(runs(ext, "Items:list") == 1);
+
+    state.autoTypes = 2;
+    Triggers::check(state);
+    CHECK(runs(ext, "Items") == 3);
+    CHECK(changed(ext, "Items") == "auto");
     CHECK(runs(ext, "Items:list") == 1);
     TestExtension::unloadAll();
 }

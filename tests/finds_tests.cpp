@@ -2,6 +2,7 @@
 #include <chrono>
 #include <filesystem>
 #include <map>
+#include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -14,6 +15,7 @@
 #include "packets/learner.hpp"
 #include "packets/links.hpp"
 #include "packets/world.hpp"
+#include "settings.hpp"
 #include "recorded_messages.hpp"
 
 namespace {
@@ -177,6 +179,32 @@ namespace {
         REQUIRE(catalog);
         return catalog;
     }
+}
+
+TEST_CASE("The types found by themselves are the links' types, the puzzle chests and the puzzles", "[finds]") {
+    CHECK(Finds::AutoTypes({}) == std::set<int>{ 18, 64, 69, 70, 71, 75, 407, 879 });
+    CHECK(Finds::AutoTypes({ { 70211001, 17 }, { 70211002, 17 }, { 73094157, 833 } })
+        == std::set<int>{ 17, 18, 64, 69, 70, 71, 75, 407, 833, 879 });
+    auto pack = installedPack();
+    REQUIRE(pack);
+    if (!ItemCatalog::current() || !ItemCatalog::current()->game.gadgetCount())
+        ItemCatalog::publish(std::make_shared<ItemCatalog::Catalog>(*pack));
+    REQUIRE(ItemCatalog::current()->game.gadgetCount());
+    Settings::readGameTraffic = false;
+    CHECK(Finds::AutoTypesNow().empty());
+    uint64_t off = Finds::AutoTypesVersion();
+    Settings::readGameTraffic = true;
+    std::set<int> now = Finds::AutoTypesNow();
+    CHECK(Finds::AutoTypesVersion() != off);
+    // the shipped ones are in, Dendro Rocks and what grows back aren't
+    for (int type : { 17, 44, 45, 269, 129, 359, 838, 356, 128, 5, 6, 194, 403, 508, 626, 694, 833, 141, 472 }) {
+        INFO(type);
+        CHECK(now.count(type));
+    }
+    CHECK(!now.count(415));
+    uint64_t version = Finds::AutoTypesVersion();
+    CHECK(Finds::AutoTypesVersion() == version);
+    Settings::readGameTraffic = false;
 }
 
 TEST_CASE("The pack's links come before the shipped ones", "[finds]") {

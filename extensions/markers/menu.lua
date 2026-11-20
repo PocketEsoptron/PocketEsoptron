@@ -119,13 +119,16 @@ local function allButton(types, id)
     ImGUI_Button((all and "None" or "All") .. "##all" .. id, function() selection.pick(ids, not all) end)
 end
 
--- each type a row: its icon, name, found / total and a box
+-- each type a row: its icon, name, found / total and a box; Auto when the
+-- overlay finds it done by itself
 local function typeRows(types)
     for _, kind in ipairs(types) do
         local on = selection.on[kind.id] == true
         local found, total = typeCount(kind.id)
+        local note = found .. " / " .. total
+        if kind.auto then note = "Auto · " .. note end
         local now = ImGUI_Toggle(kind.name .. "##type" .. kind.id, on,
-            { look = "checkbox", icon = catalog.icon(kind.id), note = found .. " / " .. total })
+            { look = "checkbox", icon = catalog.icon(kind.id), note = note })
         if now ~= on then selection.pick({ kind.id }, now) end
     end
 end

@@ -3,6 +3,7 @@
 #include "asks.hpp"
 #include "game_server.hpp"
 #include "item_catalog.hpp"
+#include "packets/finds.hpp"
 #include "lua_functions.hpp"
 #include "overlay.hpp"
 #include "settings.hpp"
@@ -54,7 +55,7 @@ namespace Triggers {
 		}
 		case Kind::MapView: return { "view", "floor" };
 		case Kind::Player: return { "found", "lost", "moved" };
-		case Kind::Items: return { "list", "loading" };
+		case Kind::Items: return { "list", "loading", "auto" };
 		case Kind::GameTraffic: return { "on", "state" };
 		case Kind::GameServer: return { "server", "reset" };
 		case Kind::Account: return { "hoyolab_map", "appsample" };
@@ -186,6 +187,7 @@ namespace Triggers {
 		case Kind::Items: {
 			const ItemFiles::Status& items = now.items;
 			parts["list"] = std::to_string(now.itemsVersion);
+			parts["auto"] = std::to_string(now.autoTypes);
 			parts["loading"] = std::to_string((int)items.state) + " " + std::to_string((int)items.reason) + " " +
 				std::to_string(items.percent) + " " + items.built + " " + (items.started ? "1" : "0") + (items.checking ? "1" : "0");
 			break;
@@ -255,6 +257,7 @@ namespace Triggers {
 			return events;
 		case Kind::Items:
 			if (has("list")) events.push_back("list");
+			if (has("auto")) events.push_back("auto");
 			if (has("loading")) events.push_back("loading");
 			return events;
 		case Kind::GameTraffic:
@@ -394,6 +397,7 @@ namespace Triggers {
 		if (wantsPlayer) now.player = MiniMap::GetPlayer();
 		if (!Overlay::PickerBox(now.picker)) now.picker = {};
 		now.itemsVersion = ItemCatalog::version();
+		now.autoTypes = Finds::AutoTypesVersion();
 		now.items = ItemFiles::GetStatus();
 		now.trafficOn = Settings::readGameTraffic;
 		now.traffic = GameTraffic::GetStatus();
