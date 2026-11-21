@@ -16,6 +16,7 @@ local catalog = require("catalog")
 local selection = require("selection")
 local collected = require("collected")
 local sync = require("sync")
+local finds = require("finds")
 local collectedPage = require("collectedpage")
 local map = require("map")
 local bar = require("bar")
@@ -39,16 +40,20 @@ function Init()
     selection.load()
     collected.load()
     sync.load()
+    finds.load()
+    finds.update()
     AddTrigger("Account", function(_, site)
         sync.accountChanged(site)
         collectedPage.accountChanged(site)
     end)
     AddTrigger("Items", function() catalog.readAuto() end, "auto")
+    AddTrigger("Finds", function() finds.update() end)
 end
 
 local asked = false
 
 function Update()
+    finds.tick()
     if catalog.update() then
         guide.close()
         selection.ready()

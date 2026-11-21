@@ -5,6 +5,7 @@
 local catalog = require("catalog")
 local selection = require("selection")
 local collected = require("collected")
+local finds = require("finds")
 local guide = require("guide")
 
 local map = {}
@@ -237,16 +238,22 @@ local layerLook = {
 -- a badge on another layer, part of the size of one on the layer showing
 map.OTHER_LAYER = 0.75
 
+-- a bubble on a badge's corner: a count, or "?" on one a find may be
+function map.drawBubble(x, y, half, text)
+    DrawBubble(x + half * 0.72, y - half * 0.72, half * 0.42, text)
+end
+
 -- arrow: "up" or "down" for a point on another layer
 local function drawBadge(x, y, half, point, typeId, isCollected, arrow, open)
     local look = open and openLook or arrow and layerLook[isCollected][arrow] or isCollected and fadedLook or plainLook
     if open then openLook.layer = arrow end
     if arrow then half = half * map.OTHER_LAYER end
     DrawBadge(x, y, half, catalog.icon(typeId), look)
+    if point and not isCollected and finds.maybe[point.id] then map.drawBubble(x, y, half, "?") end
 end
 
 local function drawCount(x, y, half, count)
-    DrawBubble(x + half * 0.72, y - half * 0.72, half * 0.42, count > 999 and "999+" or tostring(count))
+    map.drawBubble(x, y, half, count > 999 and "999+" or tostring(count))
 end
 
 -- only the middle of a badge takes taps, so the map can still be dragged from
@@ -283,7 +290,7 @@ local function drawMerged(view, rules, half, tapHalf, mouseX, mouseY)
                 local x, y = shownBuckets.x[i], shownBuckets.y[i]
                 local arrow = bucket.other and selection.layerArrow(bucket.stack[1], rules.groupId, rules.floorId)
                 local shrink = arrow and map.OTHER_LAYER or 1
-                drawBadge(x, y, half, nil, bucket.type, allCollected(bucket), arrow, false)
+                drawBadge(x, y, half, #bucket.stack == 1 and bucket.stack[1] or nil, bucket.type, allCollected(bucket), arrow, false)
                 if #bucket.stack > 1 then drawCount(x, y, half * shrink, #bucket.stack) end
                 if tapped(x, y, tapHalf and tapHalf * shrink, mouseX, mouseY) then tappedBucket = bucket end
             end

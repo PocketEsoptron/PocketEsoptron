@@ -10,9 +10,14 @@ local ids = {}
 -- goes up with every change, for what's worked out from the set
 collected.version = 0
 
--- called with (id, on, from) for each point that changed; from is who
--- changed it: "tap", "file", "get" or a site name
-collected.onChange = nil
+-- functions called with (id, on, from) for each point that changed; from is
+-- who changed it: "tap", "file", "get", "auto" (found done by the overlay) or
+-- a site name
+local listeners = {}
+
+function collected.listen(fn)
+    listeners[#listeners + 1] = fn
+end
 
 -- older saves have ids as 17.0
 function collected.whole(list)
@@ -60,7 +65,7 @@ function collected.copy()
 end
 
 local function changed(id, on, from)
-    if collected.onChange then collected.onChange(id, on, from) end
+    for _, fn in ipairs(listeners) do fn(id, on, from) end
 end
 
 function collected.set(id, on, from)
