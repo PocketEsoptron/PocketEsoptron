@@ -23,6 +23,7 @@
 #include "screen_pictures.hpp"
 #include "packets/finds.hpp"
 #include "packets/game_traffic.hpp"
+#include "game_traffic_text.hpp"
 #include "accounts.hpp"
 #include "game_server.hpp"
 #include "marks.hpp"
@@ -222,6 +223,7 @@ namespace LuaFunctions {
 		global("GetItemPositions", MapInfo, GetItemPositions);
 		global("GetItemRegions", MapInfo, GetItemRegions);
 		global("GetItemIcon", MapInfo, GetItemIcon);
+		global("CheckForMapItems", MapInfo, CheckForMapItems);
 		global("GetGameTraffic", None, GetGameTraffic);
 		global("GetGameServer", Permission::GameServer, GetGameServer);
 		global("GetFinds", MapInfo, GetFinds);
@@ -752,9 +754,17 @@ namespace LuaFunctions {
 		return ::Notices::Add(ext->folderKey, ext->name, kind, text, glfwGetTime(), tip) != 0;
 	}
 
+	// at most max bytes of it, never half a UTF-8 character
+	static std::string cutText(const std::string& text, size_t max) {
+		std::string shown = text.substr(0, max);
+		while (!shown.empty() && shown.size() < text.size() && (text[shown.size()] & 0xC0) == 0x80) shown.pop_back();
+		return shown;
+	}
+
 	// ImGUI_Toggle(label, value, options), options is optional:
 	// { look = "checkbox" or "chip", size = "small", icon = a texture from LoadTexture,
-	//   note = muted text after a chip's name }
+	//   note = muted text after a chip's name,
+	//   lines = { "...", ... } grey lines under a switch's name, wrapped beside it }
 	bool ImGUI_Toggle(const std::string& label, bool currentValue, sol::optional<sol::table> table)
 	{
 		bool value = currentValue;
@@ -767,6 +777,13 @@ namespace LuaFunctions {
 			options.note = table->get_or<std::string>("note", "");
 			options.compact = table->get_or<std::string>("size", "") == "small";
 			options.icon = iconOf("ImGUI_Toggle", *table);
+			sol::optional<sol::table> lines = table->get<sol::optional<sol::table>>("lines");
+			if (lines) {
+				for (size_t i = 1; i <= std::min<size_t>(lines->size(), 4); i++) {
+					sol::optional<std::string> line = (*lines)[i];
+					if (line && !line->empty()) options.lines.push_back({ cutText(*line, 300) });
+				}
+			}
 		}
 		options.dotted = dotted(label);
 		used(label, Controls::Toggle(label.c_str(), &value, options));
@@ -2733,6 +2750,19 @@ namespace LuaFunctions {
 		return Items::table(Items::frameCatalog ? Items::frameCatalog->version : 0, ItemFiles::GetStatus(), state);
 	}
 
+	// the menu's "Check for new map items", only from the function of a button
+	// or key; GetItems().checking is true until it's done. Nothing while the
+	// player has the download off.
+	void CheckForMapItems() {
+		Extensions::Extension* ext = Extensions::currentExtension;
+		if (!ext) return;
+		if (ext->playerAction == 0) {
+			Extensions::logOnce("CheckForMapItems", "runs only from the function of its button or key");
+			return;
+		}
+		if (Settings::downloadItems) ItemFiles::CheckNow();
+	}
+
 	// [{ id, name, types }], each type { id, name, counts (points by map id),
 	// auto = true when the overlay finds it done by itself while it reads the
 	// game's traffic }; auto can change with the list, the Items trigger's "auto"
@@ -2810,14 +2840,16 @@ namespace LuaFunctions {
 	// in the menu. state is off, cant_listen, waiting_for_login, searching,
 	// reading, needs_relog or no_key, and reason says why for cant_listen,
 	// needs_relog and no_key (npcap_missing, started_late, unknown_key_id and so
-	// on), "" otherwise. Codes, not sentences: the menu says what they mean.
-	// Needs no permission, it's only a status. An extension can't turn it on.
+	// on), "" otherwise. text is what the menu's Game traffic section says
+	// about it, for showing the same words. Needs no permission, it's only a
+	// status. An extension can't turn it on, AskForPermission("Game traffic") asks.
 	sol::table gameTrafficTable(bool on, const GameTraffic::Status& status, sol::state_view lua)
 	{
 		return lua.create_table_with(
 			"on", on,
 			"state", std::string(GameTraffic::StateCode(status)),
-			"reason", std::string(GameTraffic::ReasonCode(status)));
+			"reason", std::string(GameTraffic::ReasonCode(status)),
+			"text", GameTrafficText::For(status).text);
 	}
 
 	sol::table GetGameTraffic(sol::this_state state)

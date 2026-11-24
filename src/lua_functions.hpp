@@ -115,6 +115,7 @@ namespace LuaFunctions {
     sol::object GetMapGrid(int mapId, sol::this_state state);
     GLuint GetMapTile(int mapId, int x, int y, int size);
     sol::table GetItems(sol::this_state state);
+    void CheckForMapItems();
     sol::object GetItemTypes(sol::this_state state);
     sol::object GetItemPositions(int type, sol::this_state state);
     sol::object GetItemRegions(sol::this_state state);
