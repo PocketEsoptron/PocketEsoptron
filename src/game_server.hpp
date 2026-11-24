@@ -21,6 +21,10 @@ namespace GameServer {
 	const Server* find(const std::string& key);
 	// the picked one, nullptr when none is
 	const Server* picked();
+	// picked() for other threads, as it was at the last share()
+	const Server* shared();
+	// call after the pick changes
+	void share();
 
 	// The game's day starts at 4:00 on the server's clock.
 	inline const int ResetHour = 4;

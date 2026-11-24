@@ -3,6 +3,7 @@
 #include <deque>
 #include <filesystem>
 #include <functional>
+#include <map>
 #include <memory>
 #include <set>
 #include <unordered_set>
@@ -12,16 +13,20 @@
 #include "puzzles.hpp"
 #include "world.hpp"
 
+namespace GameServer { struct Server; }
 namespace ItemCatalog { class Catalog; }
 namespace MarkerIndex { class Index; }
 
 // The map items the player has just done, from what the World tells: a chest
 // opened, a pickup taken (gone with reason 2 with its item got in the same
 // moment) and a puzzle solved. Only objects the World saw appear count, so
-// nothing from before the overlay listened.
+// nothing from before the overlay listened. A pickup that grows back (Regrow)
+// says when, and can be found again from then, or sooner when its object is
+// seen again: the game never sends a picked object before it's back.
 
 namespace Finds {
-    enum class How { Opened, PickedUp, Solved };
+    // Back: an object waiting to grow back was seen again, it's back already
+    enum class How { Opened, PickedUp, Solved, Back };
 
     struct Found {
         How how = How::Opened;
@@ -33,6 +38,11 @@ namespace Finds {
         double x = 0, y = 0;
         // the map item's type: the one its gadget is linked to, or a puzzle chest for a chest
         int type = 0;
+        // a pickup's item, and when it grows back in Unix seconds (Regrow), 0 when it doesn't
+        uint32_t item = 0;
+        int64_t backAt = 0;
+        // backAt is by the server's clock, so it tells which server
+        bool byServer = false;
         // the map item done, 0 when more than one could be
         int32_t point = 0;
         // when point is 0: the ones that could be, nearest first
@@ -42,8 +52,23 @@ namespace Finds {
         std::vector<std::pair<uint32_t, uint32_t>> rivals;
     };
 
+    // a map item's object picked up, waiting to grow back until at (Unix seconds);
+    // group 0 when the object isn't known
+    struct Growing {
+        uint32_t group = 0, config = 0;
+        std::vector<int32_t> points;
+        int64_t at = 0;
+    };
+
     // an item got this close to a gone pickup is taken with it
     inline constexpr uint64_t SAME_MOMENT = 200;
+    // how far a picked up thing that grows back may sit from its map item: ore
+    // rocks and plants sit a bit further out than the objects links are learned
+    // from (Links::RADIUS)
+    inline constexpr double PICKUP_RADIUS = 15;
+    // drops kept, the oldest go first, and how long one may lie before it's picked up
+    inline constexpr size_t KEEP_DROPS = 32;
+    inline constexpr uint64_t DROP_LIES = 10 * 60 * 1000;
     // how far a puzzle's map item may sit from one of its parts
     inline constexpr double PUZZLE_RADIUS = 12;
 
@@ -54,12 +79,16 @@ namespace Finds {
 
         // the items pack to find map items in, nothing is found without one
         void SetCatalog(std::shared_ptr<const ItemCatalog::Catalog> catalog);
-        // map items that are done already, passed over
-        void SetDone(std::unordered_set<int32_t> done);
+        // map items that are done already, passed over, and the objects waiting to
+        // grow back. For a pickup that grows back only those waiting count as done:
+        // its object being there shows any other tick on it is out of date.
+        void SetDone(std::unordered_set<int32_t> done, std::vector<Growing> growing = {});
+        // the server whose clock some things grow back by; with none those aren't found
+        void SetServer(const GameServer::Server* server);
 
-        // world as it is after the event
+        // world as it is after the event, its ms a Unix time
         void Feed(const World::Event& event, const World::World& world, std::vector<Found>& out);
-        // drops the pickups whose item can't come any more by ms
+        // drops the pickups whose item can't come any more by ms, and what grew back by then
         void Settle(uint64_t ms);
         // the puzzles the last moment finished, when no event comes after it
         void Finish(const World::World& world, std::vector<Found>& out);
@@ -68,6 +97,14 @@ namespace Finds {
         struct Gone {
             World::Object object;
             uint64_t ms = 0;
+            // when it left, for a drop the time its gather point did
+            uint64_t at = 0;
+        };
+        // what a gather point left on the ground, an ore's chunk: its item comes
+        // when that is picked up
+        struct Drop {
+            uint64_t entity = 0;
+            Gone point;
         };
         struct Got {
             uint64_t ms = 0;
@@ -75,23 +112,48 @@ namespace Finds {
         };
 
         std::unordered_set<int> typesFor(int type) const;
-        bool find(How how, const World::Object& object, uint64_t ms, const World::World& world, Found& out);
-        bool gotItsItem(const Gone& gone, const Got& got) const;
+        bool find(How how, const World::Object& object, uint64_t ms, const World::World& world, Found& out, uint32_t item = 0);
+        uint32_t itsItem(const Gone& gone, const Got& got) const;
         void gone(const World::Event& event, const World::World& world, std::vector<Found>& out);
         void got(const World::Event& event, const World::World& world, std::vector<Found>& out);
+        void dropped(const World::Object& object, uint64_t ms);
         void solved(const std::vector<Puzzles::Solved>& solved, std::vector<Found>& out);
+        void seen(const World::Object& object, uint64_t ms, std::vector<Found>& out);
+        void remake(int64_t now);
 
         Links::Links& m_links;
         std::shared_ptr<const ItemCatalog::Catalog> m_catalog;
         std::shared_ptr<const MarkerIndex::Index> m_index;
         Links::Types m_types;
-        // found this run, and those with the ones done before
-        std::unordered_set<int32_t> m_found, m_taken;
-        std::set<std::pair<uint32_t, uint32_t>> m_foundObjects;
+        using Key = std::pair<uint32_t, uint32_t>;
+        struct Back {
+            int64_t at = 0;
+            std::vector<int32_t> points;
+        };
+        // found this run; given as done; both, and for pickups that grow back the
+        // ones waiting to
+        std::unordered_set<int32_t> m_found, m_done, m_taken, m_growingTaken;
+        std::set<Key> m_foundObjects;
+        // the ones found this run that grow back, with when
+        std::map<int32_t, int64_t> m_backPoints;
+        std::map<Key, Back> m_backObjects;
+        // the ones given as waiting, by object, and the ones without one
+        std::map<Key, Back> m_givenObjects;
+        std::vector<Back> m_givenPoints;
+        // the soonest a given one is back, when the sets are made again
+        int64_t m_nextBack = INT64_MAX;
+        const GameServer::Server* m_server = nullptr;
         std::deque<Gone> m_waiting;
         std::deque<Got> m_got;
+        std::deque<Drop> m_drops;
         Puzzles::Tracker m_puzzles;
     };
+
+    // What every extension gave as done (SetDone) goes to the running Finder:
+    // the map items they all agree are done, so one can only take hints away,
+    // and every object waiting to grow back, one seen again being a fact.
+    extern void SetDoneFor(const void* owner, std::unordered_set<int32_t> done, std::vector<Growing> growing);
+    extern void ForgetDone(const void* owner);
 
     // the items pack's links (game/links.json), then the ones the build ships, then
     // the chests by their names in the pack's tables, then the gathers by their items' names

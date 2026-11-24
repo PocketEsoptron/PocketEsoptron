@@ -2,6 +2,7 @@
 #include "controls.hpp"
 #include "settings.hpp"
 #include <algorithm>
+#include <atomic>
 
 namespace GameServer {
 	const std::vector<Server>& list() {
@@ -24,6 +25,16 @@ namespace GameServer {
 
 	const Server* picked() {
 		return find(Settings::gameServer);
+	}
+
+	static std::atomic<const Server*> sharedServer{ nullptr };
+
+	const Server* shared() {
+		return sharedServer.load();
+	}
+
+	void share() {
+		sharedServer.store(picked());
 	}
 
 	int64_t nextReset(const Server& server, int64_t now) {
@@ -51,6 +62,7 @@ namespace GameServer {
 		int index = now ? (int)(now - list().data()) + 1 : 0;
 		if (!Controls::Choice("Game server", index, names)) return false;
 		Settings::gameServer = index > 0 ? list()[index - 1].key : "";
+		share();
 		Settings::Save();
 		return true;
 	}

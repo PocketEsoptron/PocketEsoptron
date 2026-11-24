@@ -117,6 +117,7 @@ namespace Settings {
         auto savedServer = settings.find("gameServer");
         gameServer = savedServer != settings.end() && savedServer->is_string() ? savedServer->get<std::string>() : "";
         if (!GameServer::find(gameServer)) gameServer.clear();
+        GameServer::share();
         usageInList = settings.value("usageInList", true);
         checkUpdates = settings.value("checkUpdates", true);
         keepInTray = settings.value("keepInTray", true);

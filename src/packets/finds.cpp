@@ -8,13 +8,26 @@
 #include "../game_tables.hpp"
 #include "../helpers.hpp"
 #include "../item_catalog.hpp"
+#include "../game_server.hpp"
 #include "../marker_index.hpp"
+#include "../regrow.hpp"
 #include "../settings.hpp"
 #include "scene.hpp"
 
 namespace Finds {
     // the game's reason for an object taken
     static constexpr uint32_t DONE_REASON = 2;
+
+    template <typename List, typename If>
+    static void eraseIf(List& list, If test) {
+        list.erase(std::remove_if(list.begin(), list.end(), test), list.end());
+    }
+
+    template <typename If>
+    static void eraseIf(std::unordered_set<int32_t>& set, If test) {
+        for (auto it = set.begin(); it != set.end();)
+            it = test(*it) ? set.erase(it) : std::next(it);
+    }
 
     Finder::Finder(Links::Links& links) : m_links(links) {}
     Finder::~Finder() = default;
@@ -31,9 +44,52 @@ namespace Finds {
         m_puzzles = Puzzles::Tracker();
     }
 
-    void Finder::SetDone(std::unordered_set<int32_t> done) {
-        m_taken = std::move(done);
+    void Finder::SetDone(std::unordered_set<int32_t> done, std::vector<Growing> growing) {
+        m_done = std::move(done);
+        m_givenObjects.clear();
+        m_givenPoints.clear();
+        for (Growing& g : growing) {
+            if (g.at <= 0)
+                continue;
+            if (!g.group) {
+                if (!g.points.empty())
+                    m_givenPoints.push_back({ g.at, std::move(g.points) });
+                continue;
+            }
+            Back& back = m_givenObjects[{ g.group, g.config }];
+            back.at = std::max(back.at, g.at);
+            back.points.insert(back.points.end(), g.points.begin(), g.points.end());
+        }
+        // made again on the next Settle, which knows the time
+        m_nextBack = INT64_MIN;
+    }
+
+    // what's passed over, from what's found, given and waiting to grow back at now
+    void Finder::remake(int64_t now) {
+        m_taken = m_done;
         m_taken.insert(m_found.begin(), m_found.end());
+        m_growingTaken.clear();
+        for (auto& [point, at] : m_backPoints)
+            m_growingTaken.insert(point);
+        m_nextBack = INT64_MAX;
+        for (auto it = m_givenObjects.begin(); it != m_givenObjects.end();) {
+            if (it->second.at <= now) {
+                it = m_givenObjects.erase(it);
+                continue;
+            }
+            m_growingTaken.insert(it->second.points.begin(), it->second.points.end());
+            m_nextBack = std::min(m_nextBack, it->second.at);
+            ++it;
+        }
+        eraseIf(m_givenPoints, [now](const Back& b) { return b.at <= now; });
+        for (const Back& b : m_givenPoints) {
+            m_growingTaken.insert(b.points.begin(), b.points.end());
+            m_nextBack = std::min(m_nextBack, b.at);
+        }
+    }
+
+    void Finder::SetServer(const GameServer::Server* server) {
+        m_server = server;
     }
 
     void Finder::Feed(const World::Event& event, const World::World& world, std::vector<Found>& out) {
@@ -46,6 +102,8 @@ namespace Finds {
         switch (event.what) {
         case World::What::Appeared:
             m_links.See(event.object, *m_index, m_catalog->game, m_types);
+            seen(event.object, event.ms, out);
+            dropped(event.object, event.ms);
             break;
         case World::What::Opened: {
             Found found;
@@ -71,6 +129,71 @@ namespace Finds {
             m_got.pop_front();
         while (!m_waiting.empty() && m_waiting.front().ms + SAME_MOMENT < ms)
             m_waiting.pop_front();
+        while (!m_drops.empty() && m_drops.front().point.at + DROP_LIES < ms)
+            m_drops.pop_front();
+        // what grew back can be found again
+        int64_t now = int64_t(ms / 1000);
+        bool changed = now >= m_nextBack;
+        for (auto it = m_backPoints.begin(); it != m_backPoints.end();) {
+            if (it->second > now) {
+                ++it;
+                continue;
+            }
+            m_found.erase(it->first);
+            it = m_backPoints.erase(it);
+            changed = true;
+        }
+        for (auto it = m_backObjects.begin(); it != m_backObjects.end();) {
+            if (it->second.at > now) {
+                ++it;
+                continue;
+            }
+            m_foundObjects.erase(it->first);
+            it = m_backObjects.erase(it);
+        }
+        if (changed)
+            remake(now);
+    }
+
+    // An object waiting to grow back that the World sees again is back already:
+    // the game doesn't send a picked object before then. It can be found again.
+    void Finder::seen(const World::Object& object, uint64_t ms, std::vector<Found>& out) {
+        if (!object.group)
+            return;
+        const Key key = { object.group, object.config };
+        int64_t now = int64_t(ms / 1000);
+        auto own = m_backObjects.find(key);
+        auto given = m_givenObjects.find(key);
+        bool ownWaits = own != m_backObjects.end() && own->second.at > now;
+        bool givenWaits = given != m_givenObjects.end() && given->second.at > now;
+        if (!ownWaits && !givenWaits)
+            return;
+        Found found;
+        found.how = How::Back;
+        found.ms = ms;
+        found.gadget = object.gadget;
+        found.group = object.group;
+        found.config = object.config;
+        found.type = m_links.TypeOf(object.gadget);
+        int map = Links::MapOf(object.group);
+        Scene::MapPos at;
+        if (object.hasPos && map && Scene::ToMap(object.pos, map, at)) {
+            found.map = map;
+            found.x = at.x;
+            found.y = at.y;
+        }
+        if (own != m_backObjects.end()) {
+            for (int32_t point : own->second.points) {
+                m_found.erase(point);
+                m_backPoints.erase(point);
+            }
+            m_backObjects.erase(own);
+        }
+        m_foundObjects.erase(key);
+        if (given != m_givenObjects.end())
+            m_givenObjects.erase(given);
+        remake(now);
+        out.push_back(std::move(found));
     }
 
     void Finder::Finish(const World::World& world, std::vector<Found>& out) {
@@ -135,23 +258,55 @@ namespace Finds {
         return (a > b ? a - b : b - a) <= SAME_MOMENT;
     }
 
-    // the item the pickup's gather point gives
-    bool Finder::gotItsItem(const Gone& gone, const Got& got) const {
+    // the item got that the pickup's gather point gives, 0 when none is
+    uint32_t Finder::itsItem(const Gone& gone, const Got& got) const {
         for (const GameTables::Gather& gather : m_catalog->game.gathers(gone.object.gadget))
             for (const auto& [item, count] : got.items)
                 if (item == gather.item)
-                    return true;
-        return false;
+                    return item;
+        return 0;
+    }
+
+    // An object without a group that shows up near a gather point as it goes is
+    // what it left on the ground, the point's item comes with it. One hit can
+    // break a few rocks at once, a drop is the nearest one's
+    void Finder::dropped(const World::Object& object, uint64_t ms) {
+        if (object.group || !object.hasPos)
+            return;
+        const Gone* from = nullptr;
+        double best = 0;
+        for (const Gone& g : m_waiting) {
+            if (g.at != g.ms || g.ms > ms || !sameMoment(g.ms, ms) || !g.object.hasPos)
+                continue;
+            double d = std::hypot(g.object.pos.x - object.pos.x, g.object.pos.z - object.pos.z);
+            if (d <= PICKUP_RADIUS && (!from || d < best)) {
+                from = &g;
+                best = d;
+            }
+        }
+        if (!from)
+            return;
+        m_drops.push_back({ object.entity, *from });
+        if (m_drops.size() > KEEP_DROPS)
+            m_drops.pop_front();
     }
 
     void Finder::gone(const World::Event& event, const World::World& world, std::vector<Found>& out) {
-        if (Links::RouteOf(event.object.gadget, m_catalog->game) != Links::Route::PickedUp)
+        Gone g = { event.object, event.ms, event.ms };
+        // a drop picked up stands for its gather point
+        auto drop = std::find_if(m_drops.begin(), m_drops.end(), [&](const Drop& d) { return d.entity == event.object.entity; });
+        if (drop != m_drops.end()) {
+            g = drop->point;
+            g.ms = event.ms;
+            m_drops.erase(drop);
+        }
+        Links::Route route = Links::RouteOf(g.object.gadget, m_catalog->game);
+        if (route != Links::Route::PickedUp && route != Links::Route::Regrows)
             return;
         Found found;
-        Gone g = { event.object, event.ms };
         for (const Got& got : m_got)
-            if (sameMoment(got.ms, g.ms) && gotItsItem(g, got)) {
-                if (find(How::PickedUp, g.object, g.ms, world, found))
+            if (uint32_t item = sameMoment(got.ms, g.ms) ? itsItem(g, got) : 0) {
+                if (find(How::PickedUp, g.object, g.at, world, found, item))
                     out.push_back(std::move(found));
                 return;
             }
@@ -161,12 +316,13 @@ namespace Finds {
     void Finder::got(const World::Event& event, const World::World& world, std::vector<Found>& out) {
         Got got = { event.ms, event.items };
         for (auto it = m_waiting.begin(); it != m_waiting.end();) {
-            if (!sameMoment(it->ms, got.ms) || !gotItsItem(*it, got)) {
+            uint32_t item = sameMoment(it->ms, got.ms) ? itsItem(*it, got) : 0;
+            if (!item) {
                 ++it;
                 continue;
             }
             Found found;
-            if (find(How::PickedUp, it->object, it->ms, world, found))
+            if (find(How::PickedUp, it->object, it->at, world, found, item))
                 out.push_back(std::move(found));
             it = m_waiting.erase(it);
         }
@@ -184,16 +340,22 @@ namespace Finds {
     // The one map item of the gadget's types at the object, not done yet. Not sure
     // when two fit, or when another object of those types the World has sits about
     // as near to it.
-    bool Finder::find(How how, const World::Object& object, uint64_t ms, const World::World& world, Found& out) {
+    bool Finder::find(How how, const World::Object& object, uint64_t ms, const World::World& world, Found& out, uint32_t item) {
         int type = m_links.TypeOf(object.gadget);
         int map = Links::MapOf(object.group);
         Scene::MapPos at;
         if (!type || !object.hasPos || !map || !Scene::ToMap(object.pos, map, at)
             || m_foundObjects.count({ object.group, object.config }))
             return false;
+        // a thing that grows back by the server's clock waits for a server
+        Regrow::Rule regrow = item ? Regrow::Of(item, m_catalog->game) : Regrow::Rule();
+        int64_t backAt = Regrow::BackAt(regrow, int64_t(ms / 1000), m_server);
+        if (regrow.grows() && !backAt)
+            return false;
         std::unordered_set<int> types = typesFor(type);
-        MarkerIndex::Near near = m_index->UniqueNear(types, map, at.x, at.y, Links::RADIUS, Links::MARGIN,
-            MarkerIndex::Floor::Any(), &m_taken);
+        double radius = how == How::PickedUp && regrow.grows() ? PICKUP_RADIUS : Links::RADIUS;
+        MarkerIndex::Near near = m_index->UniqueNear(types, map, at.x, at.y, radius, Links::MARGIN,
+            MarkerIndex::Floor::Any(), regrow.grows() ? &m_growingTaken : &m_taken);
         if (!near.nearest)
             return false;
         out = Found();
@@ -206,7 +368,12 @@ namespace Finds {
         out.x = at.x;
         out.y = at.y;
         out.type = near.nearest->type;
+        out.item = item;
+        out.backAt = backAt;
+        out.byServer = regrow.needsServer();
         m_foundObjects.insert({ object.group, object.config });
+        if (backAt)
+            m_backObjects[{ object.group, object.config }] = { backAt, {} };
 
         const ItemCatalog::Point& point = *near.nearest;
         double clear = std::max(2 * near.distance, near.distance + Links::MARGIN);
@@ -224,6 +391,11 @@ namespace Finds {
             out.point = point.id;
             m_found.insert(point.id);
             m_taken.insert(point.id);
+            if (backAt) {
+                m_backPoints[point.id] = backAt;
+                m_growingTaken.insert(point.id);
+                m_backObjects[{ object.group, object.config }].points.push_back(point.id);
+            }
             return true;
         }
         if (near.unique)
@@ -284,11 +456,60 @@ namespace Finds {
             // the catalog the finder has, taken on the first event
             bool followed = false;
             uint64_t catalog = 0;
+            // the SetDoneFor version it has
+            uint64_t done = 0;
             std::filesystem::path file;
             bool saves = true;
             bool unsaved = false;
             std::chrono::steady_clock::time_point saved;
         };
+    }
+
+    // SetDoneFor's, by extension, and what they come to
+    static std::mutex doneMutex;
+    static std::map<const void*, std::pair<std::unordered_set<int32_t>, std::vector<Growing>>> doneBy;
+    static std::unordered_set<int32_t> doneAgreed;
+    static std::vector<Growing> growingAll;
+    static uint64_t doneVersion = 0;
+
+    static void mergeDone() {
+        doneAgreed.clear();
+        growingAll.clear();
+        doneVersion++;
+        // done, and waiting to grow back, by every one of them
+        std::unordered_set<int32_t> waiting;
+        bool first = true;
+        for (auto& [owner, given] : doneBy) {
+            std::unordered_set<int32_t> theirs;
+            for (const Growing& g : given.second)
+                theirs.insert(g.points.begin(), g.points.end());
+            if (first) {
+                doneAgreed = given.first;
+                waiting = std::move(theirs);
+                first = false;
+                continue;
+            }
+            eraseIf(doneAgreed, [&](int32_t id) { return !given.first.count(id); });
+            eraseIf(waiting, [&](int32_t id) { return !theirs.count(id); });
+        }
+        for (auto& [owner, given] : doneBy)
+            for (Growing g : given.second) {
+                eraseIf(g.points, [&](int32_t id) { return !waiting.count(id); });
+                if (g.group || !g.points.empty())
+                    growingAll.push_back(std::move(g));
+            }
+    }
+
+    void SetDoneFor(const void* owner, std::unordered_set<int32_t> done, std::vector<Growing> growing) {
+        std::lock_guard lock(doneMutex);
+        doneBy[owner] = { std::move(done), std::move(growing) };
+        mergeDone();
+    }
+
+    void ForgetDone(const void* owner) {
+        std::lock_guard lock(doneMutex);
+        if (doneBy.erase(owner))
+            mergeDone();
     }
 
     static std::mutex mutex;
@@ -402,6 +623,7 @@ namespace Finds {
         switch (how) {
         case How::Opened: return "opened";
         case How::PickedUp: return "picked up";
+        case How::Back: return "back";
         default: return "solved";
         }
     }
@@ -424,6 +646,14 @@ namespace Finds {
                 Running& r = *running;
                 if (!r.followed || ItemCatalog::version() != r.catalog)
                     follow(r);
+                r.finder.SetServer(GameServer::shared());
+                {
+                    std::lock_guard doneLock(doneMutex);
+                    if (r.done != doneVersion) {
+                        r.done = doneVersion;
+                        r.finder.SetDone(doneAgreed, growingAll);
+                    }
+                }
                 World::Visit([&](const World::World& world) { r.finder.Feed(event, world, found); });
                 r.unsaved = r.links.TakeUnsaved() || r.unsaved;
                 if (r.links.TakeChanged()) {
@@ -438,7 +668,9 @@ namespace Finds {
                 return;
             for (const Found& f : found) {
                 std::cout << "Map items: " << howName(f.how) << " " << f.gadget << " at " << f.group << "/" << f.config << ", ";
-                if (f.point) {
+                if (f.how == How::Back) {
+                    std::cout << "grew back";
+                } else if (f.point) {
                     std::cout << "point " << f.point;
                 } else {
                     std::cout << "not sure:";

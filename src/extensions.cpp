@@ -561,6 +561,7 @@ namespace Extensions {
 		Triggers::forget(&ext);
 		LuaFunctions::forgetNetRequests(&ext);
 		LuaFunctions::forgetMarks(&ext);
+		LuaFunctions::forgetFinds(&ext);
 		LuaFunctions::forgetFileDialogs(&ext);
 		LuaFunctions::forgetSockets(&ext);
 		if (!ext.textures.empty()) {

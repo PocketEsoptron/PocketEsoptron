@@ -40,6 +40,7 @@
 #include <chrono>
 #include <ctime>
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <memory>
 #include <condition_variable>
@@ -224,6 +225,7 @@ namespace LuaFunctions {
 		global("GetGameTraffic", None, GetGameTraffic);
 		global("GetGameServer", Permission::GameServer, GetGameServer);
 		global("GetFinds", MapInfo, GetFinds);
+		global("SetFindsDone", MapInfo, SetFindsDone);
 
 		// the player's logins, each site's account permission checked inside
 		global("GetAccount", None, GetAccount);
@@ -2843,6 +2845,7 @@ namespace LuaFunctions {
 		switch (how) {
 		case Finds::How::Opened: return "opened";
 		case Finds::How::PickedUp: return "picked_up";
+		case Finds::How::Back: return "back";
 		default: return "solved";
 		}
 	}
@@ -2855,15 +2858,21 @@ namespace LuaFunctions {
 	{
 		std::vector<Finds::Numbered> finds = Finds::Recent(after);
 		sol::table list = lua.create_table((int)finds.size(), 0);
+		// a time by the server's clock would tell the server
+		Extensions::Extension* ext = Extensions::currentExtension;
+		bool server = ext && ext->extensionPermissions.count(Permission::GameServer);
 		int i = 1;
 		for (const Finds::Numbered& n : finds) {
 			const Finds::Found& f = n.found;
+			if (f.byServer && !server) continue;
 			std::string object = f.how == Finds::How::Solved ? "" : objectKey(f.group, f.config);
 			sol::table each = lua.create_table_with("id", n.id, "how", howName(f.how), "type", f.type,
 				"map", f.map, "x", f.x, "y", f.y, "object", object);
+			if (f.item) each["item"] = f.item;
+			if (f.backAt) each["back_at"] = f.backAt;
 			if (f.point) {
 				each["point"] = f.point;
-			} else {
+			} else if (f.how != Finds::How::Back) {
 				sol::table maybe = lua.create_table((int)f.candidates.size(), 0);
 				int c = 1;
 				for (int32_t id : f.candidates) maybe[c++] = id;
@@ -2881,6 +2890,57 @@ namespace LuaFunctions {
 	sol::table GetFinds(sol::optional<uint64_t> after, sol::this_state state)
 	{
 		return findsTable(after.value_or(0), state);
+	}
+
+	// the point ids of a list, the rest left out
+	static std::vector<int32_t> pointIds(const sol::object& list) {
+		std::vector<int32_t> out;
+		if (list.get_type() != sol::type::table) return out;
+		for (auto& [key, value] : list.as<sol::table>()) {
+			if (value.get_type() != sol::type::number) continue;
+			double id = value.as<double>();
+			if (id >= 1 && id <= INT32_MAX && id == std::floor(id)) out.push_back((int32_t)id);
+		}
+		return out;
+	}
+
+	// "group/config", false when it isn't one
+	static bool objectNamed(const std::string& text, uint32_t& group, uint32_t& config) {
+		const char* end = text.data() + text.size();
+		auto [slash, e1] = std::from_chars(text.data(), end, group);
+		if (e1 != std::errc() || slash == end || *slash != '/' || !group) return false;
+		auto [rest, e2] = std::from_chars(slash + 1, end, config);
+		return e2 == std::errc() && rest == end;
+	}
+
+	void SetFindsDone(sol::table done, sol::optional<sol::table> growing)
+	{
+		Extensions::Extension* ext = Extensions::currentExtension;
+		if (!ext) return;
+		std::vector<int32_t> ids = pointIds(done);
+		std::unordered_set<int32_t> doneSet(ids.begin(), ids.end());
+		std::vector<Finds::Growing> waiting;
+		if (growing) {
+			for (auto& [key, value] : *growing) {
+				if (value.get_type() != sol::type::table) continue;
+				sol::table each = value.as<sol::table>();
+				Finds::Growing g;
+				g.at = each.get_or<int64_t>("back_at", 0);
+				g.points = pointIds(each["points"]);
+				sol::optional<std::string> object = each["object"];
+				if (object && !object->empty() && !objectNamed(*object, g.group, g.config)) {
+					Extensions::logOnce("SetFindsDone", "object is \"group/config\", as GetFinds gives it");
+					continue;
+				}
+				if (g.at > 0 && (g.group || !g.points.empty())) waiting.push_back(std::move(g));
+			}
+		}
+		Finds::SetDoneFor(ext, std::move(doneSet), std::move(waiting));
+	}
+
+	void forgetFinds(Extensions::Extension* owner)
+	{
+		Finds::ForgetDone(owner);
 	}
 
 	static Permission accountPermission(Accounts::Site site) {
