@@ -78,7 +78,20 @@ namespace Asks {
 		waiting.push_back(std::move(ask));
 	}
 
+	// asked from its button's or key's function, or right after the player
+	// flipped one of its switches
+	static bool playersOwn(const Extension& ext) {
+		if (ext.playerAction) return true;
+		return ImGui::GetCurrentContext() && ext.flippedFrame == ImGui::GetFrameCount();
+	}
+
+	// The player asked for it, so a Not now this start doesn't stop the
+	// question; Never ask again and a switch turned off do
 	void askPermission(Extension& ext, Permission permission) {
+		if (playersOwn(ext)) {
+			ext.refused.erase(permission);
+			if (permission == Permission::GameServer) ext.serverPickRefused = false;
+		}
 		if (permission == Permission::GameServer && ext.extensionPermissions.count(permission)) {
 			if (!ext.stopped && !GameServer::picked() && !ext.serverPickRefused) questionFor(ext, Kind::Server);
 			return;
@@ -132,6 +145,7 @@ namespace Asks {
 
 	void askSetting(Extension& ext, const std::string& name) {
 		const OverlaySetting* setting = findSetting(name);
+		if (playersOwn(ext)) ext.refusedSettings.erase(name);
 		if (ext.stopped || !setting || settingState(ext, name) != "not_asked") return;
 		if (queued(ext, Kind::Setting)) return;
 		Ask& ask = questionFor(ext, Kind::Setting);

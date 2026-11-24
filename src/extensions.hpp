@@ -246,6 +246,9 @@ namespace Extensions {
 		// its button or key function runs now: the player started it, so it
 		// may open a file dialog
 		int playerAction = 0;
+		// the frame the player last flipped one of its switches or boxes: what
+		// it asks for in that frame is the player's own ask too (Asks)
+		int flippedFrame = -1;
 		Cost cost;
 		// when each permission was last used, seconds since 1970, 0 for not yet
 		long long lastUsed[PermissionCount] = {};

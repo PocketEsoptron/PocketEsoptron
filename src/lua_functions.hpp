@@ -302,7 +302,9 @@ namespace LuaFunctions {
     // PermissionState gives "allowed", "not_asked", "refused" (this start),
     // "never" (Never ask again) or "off" (switched off on its Permissions
     // tab), nil for a name nothing has. AskForPermission queues the question,
-    // it shows while the map or menu is open.
+    // it shows while the map or menu is open. A "refused" is asked again only
+    // from a button's or key's function, or right after the player flips one
+    // of its switches.
     sol::object PermissionState(const std::string& name, sol::this_state state);
     void AskForPermission(const std::string& name);
     // OpenPermissions(name): its Permissions tab, from its menu only; with a

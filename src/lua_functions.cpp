@@ -326,6 +326,12 @@ namespace LuaFunctions {
 		if (used && Extensions::currentExtension) Extensions::currentExtension->dots.erase(label);
 	}
 
+	// the player flipped one of its switches just now (asks after it in this
+	// frame are the player's own, like a press's)
+	static void playerFlipped() {
+		if (Extensions::currentExtension) Extensions::currentExtension->flippedFrame = ImGui::GetFrameCount();
+	}
+
 	// ImGUI_Button(label, onPress, options), options is optional:
 	// { look = "main" or "risky", busy = true or the text to show while busy }
 	void ImGUI_Button(const std::string& label, sol::protected_function callback, sol::optional<sol::table> table) {
@@ -357,7 +363,9 @@ namespace LuaFunctions {
 		if (!inMenu("ImGUI_Checkbox")) return value;
 		Controls::ToggleOptions options;
 		options.dotted = dotted(label);
-		used(label, Controls::Toggle(label.c_str(), &value, options));
+		bool flipped = Controls::Toggle(label.c_str(), &value, options);
+		used(label, flipped);
+		if (flipped) playerFlipped();
 		return value;
 	}
 
@@ -786,7 +794,9 @@ namespace LuaFunctions {
 			}
 		}
 		options.dotted = dotted(label);
-		used(label, Controls::Toggle(label.c_str(), &value, options));
+		bool flipped = Controls::Toggle(label.c_str(), &value, options);
+		used(label, flipped);
+		if (flipped) playerFlipped();
 		return value;
 	}
 
