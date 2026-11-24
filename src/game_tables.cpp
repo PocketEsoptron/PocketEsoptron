@@ -99,6 +99,14 @@ namespace GameTables {
 		return true;
 	}
 
+	std::vector<Gadget> Tables::gadgetsOfType(std::string_view type) const {
+		std::vector<Gadget> out;
+		for (const GadgetRow& g : m_gadgets)
+			if (wordAt(g.type) == type)
+				out.push_back({ g.id, wordAt(g.type), std::string_view(m_names).substr(g.nameAt, g.nameSize) });
+		return out;
+	}
+
 	bool Tables::material(uint32_t id, Material& out) const {
 		auto found = std::lower_bound(m_materials.begin(), m_materials.end(), id, [](const MaterialRow& m, uint32_t i) { return m.id < i; });
 		if (found == m_materials.end() || found->id != id) return false;

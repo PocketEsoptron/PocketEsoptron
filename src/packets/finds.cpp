@@ -241,6 +241,9 @@ namespace Finds {
             known.clear();
         for (auto& [gadget, type] : Links::Shipped())
             known.insert({ gadget, type });
+        if (catalog)
+            for (auto& [gadget, type] : Links::ChestsByName(catalog->game))
+                known.insert({ gadget, type });
         return known;
     }
 

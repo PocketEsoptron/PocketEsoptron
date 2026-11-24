@@ -142,6 +142,24 @@ TEST_CASE("Teyvat's groups are on map 2", "[links]") {
 }
 
 // gadget names from the game's gadget table, types from HoYoLAB
+TEST_CASE("A chest's name gives its type", "[links]") {
+    CHECK(Links::ChestByName("SceneObj_Chest_Default_Lv1") == 17);
+    CHECK(Links::ChestByName("SceneObj_Chest_Locked_Lv2") == 44);
+    CHECK(Links::ChestByName("SceneObj_EssenceChest_Locked_Lv4") == 45);
+    CHECK(Links::ChestByName("SceneObj_Chest_Locked_Lv5_UnderWater") == 46);
+    CHECK(Links::ChestByName("SceneObj_Chest_Default_Lv2_V70") == 44);
+    CHECK(Links::ChestByName("SceneObj_Chest_Locked_Lv4_FollowMove") == 45);
+    CHECK(Links::ChestByName("SceneObj_Chest_Bramble_Lv1") == 75);
+    CHECK(Links::ChestByName("SceneObj_Chest_Frozen_Lv4") == 75);
+    CHECK(Links::ChestByName("SceneObj_Chest_Rock_Lv1") == 75);
+    CHECK(Links::ChestByName("SceneObj_Chest_Default_Lv3") == 0);
+    CHECK(Links::ChestByName("SceneObj_Chest_Default_Fake_Lv2") == 0);
+    CHECK(Links::ChestByName("SceneObj_Drop_Chest_Lv1") == 0);
+    CHECK(Links::ChestByName("SceneObj_Ticket_Chest_Locked_Lv1") == 0);
+    CHECK(Links::ChestByName("SceneObj_Chest_NormalChest") == 0);
+    CHECK(Links::ChestByName("SceneObj_Area_Dq_Property_Ani_Prop_JunkChest_01") == 0);
+}
+
 TEST_CASE("The recordings link each gadget to its map item type", "[links]") {
     std::vector<std::filesystem::path> recordings = RecordedMessages::recordings();
     auto catalog = installedPack();

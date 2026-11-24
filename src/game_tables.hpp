@@ -48,6 +48,8 @@ namespace GameTables {
 	class Tables {
 	public:
 		bool gadget(uint32_t id, Gadget& out) const;
+		// every gadget of a type, "Chest", by id
+		std::vector<Gadget> gadgetsOfType(std::string_view type) const;
 		bool material(uint32_t id, Material& out) const;
 		// the gather points that use this gadget
 		std::vector<Gather> gathers(uint32_t gadget) const;

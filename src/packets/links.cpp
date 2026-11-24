@@ -16,6 +16,7 @@ namespace Links {
     // HoYoLAB's groups and types
     static constexpr int CHESTS = 13, SPECIAL_ITEMS = 4, EXPERIENCE = 51, PUZZLE_CHEST = 186;
     static constexpr int LOCAL_SPECIALTIES = 10, ORES = 11, MATERIALS = 60;
+    static constexpr int COMMON_CHEST = 17, EXQUISITE_CHEST = 44, PRECIOUS_CHEST = 45, LUXURIOUS_CHEST = 46;
     static constexpr int TEYVAT = 2;
     // a link needs this many objects on its type
     static constexpr size_t AGREE = 2;
@@ -342,6 +343,32 @@ namespace Links {
         }
         out = std::move(read);
         return true;
+    }
+
+    int ChestByName(std::string_view name) {
+        auto has = [&](std::string_view part) { return name.find(part) != std::string_view::npos; };
+        if (!has("Chest_") || has("_Fake") || has("Drop_Chest") || has("Ticket_"))
+            return 0;
+        if (has("Chest_Bramble_") || has("Chest_Frozen_") || has("Chest_Rock_"))
+            return SEALED_CHEST;
+        size_t at = name.find("_Lv");
+        if (at == std::string_view::npos || at + 3 >= name.size())
+            return 0;
+        switch (name[at + 3]) {
+        case '1': return COMMON_CHEST;
+        case '2': return EXQUISITE_CHEST;
+        case '4': return PRECIOUS_CHEST;
+        case '5': return LUXURIOUS_CHEST;
+        }
+        return 0;
+    }
+
+    Known ChestsByName(const GameTables::Tables& tables) {
+        Known out;
+        for (const GameTables::Gadget& g : tables.gadgetsOfType("Chest"))
+            if (int type = ChestByName(g.name))
+                out[g.id] = type;
+        return out;
     }
 
     Known Shipped() {

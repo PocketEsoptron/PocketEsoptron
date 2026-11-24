@@ -50,7 +50,7 @@ namespace {
         const Learner::Known& known, std::unordered_set<int32_t> done = {}) {
         Learner::Learner learner(known);
         World::World world;
-        Links::Links links(Links::Shipped());
+        Links::Links links(Finds::KnownLinks(catalog.get()));
         Finds::Finder finder(links);
         finder.SetCatalog(catalog);
         finder.SetDone(std::move(done));
@@ -133,7 +133,8 @@ TEST_CASE("The finds on every recording", "[finds]") {
         SKIP("no recordings or no items pack with the game's tables on this PC");
     // the old found list (a473787) and the puzzles, each checked on HoYoLAB, and the 2026-11-21 and
     // 2026-11-22 plays, each ticked on the map right after it was done. The 0 on 11-22 is a Wooden Mora
-    // Chest with two next to it, both ticked
+    // Chest with two next to it, both ticked. On 11-24 every find was ticked by Markers itself and checked
+    // by the player in game, the two 0s are the Wooden Mora Chests 65410 and 65411 opened one after the other
     const std::map<std::string, std::vector<int32_t>> right = {
         { "2026-10-14_21-47", { 4831 } },
         { "2026-10-17_18-39", { 1305 } },
@@ -146,8 +147,9 @@ TEST_CASE("The finds on every recording", "[finds]") {
         { "2026-10-19_stonepile", { 32859 } },
         { "2026-11-21_a-s4-puzzles", { 65434, 64877, 64874, 65081, 64804, 65046, 65047, 64994, 64949, 64971, 65069 } },
         { "2026-11-22_play", { 0, 65365, 64803, 64802, 64856, 64916, 64875, 65022, 64798, 65450, 64799, 64876, 64800, 64921,
-                               65435, 65502, 64868, 65436, 64969, 65048, 64898, 64805, 64970, 64806, 65367, 65368, 104473,
+                               65435, 64920, 65502, 64868, 65436, 64969, 65048, 64898, 64805, 64970, 64806, 65367, 65368, 104473,
                                104610, 101909, 100876, 100812, 104451, 101840, 101839, 101838, 101911, 101910 } },
+        { "2026-11-24_g-s2-live", { 86295, 85997, 86071, 0, 0, 64852, 64813, 100836 } },
     };
     for (const std::filesystem::path& recording : recordings) {
         auto it = right.find(recording.filename().string());
@@ -229,15 +231,41 @@ TEST_CASE("The types found by themselves are the links' types, the puzzle chests
     Settings::readGameTraffic = false;
 }
 
-TEST_CASE("The pack's links come before the shipped ones", "[finds]") {
+TEST_CASE("The pack's links come before the shipped ones, then the chests by their names", "[finds]") {
     Links::Known known = Finds::KnownLinks(withLinks("[{\"gadget\": 70590074, \"type\": 17}, {\"gadget\": 1, \"type\": 44}]").get());
     CHECK(known.at(70590074) == 17);
     CHECK(known.at(1) == 44);
     CHECK(known.at(70590063) == 403);
-    CHECK(known.size() == Links::Shipped().size() + 1);
-    CHECK(Finds::KnownLinks(withLinks("not json").get()) == Links::Shipped());
-    CHECK(Finds::KnownLinks(cut().get()) == Links::Shipped());
+    Links::Known byName = Links::ChestsByName(cut()->game);
+    Links::Known shipped = Links::Shipped();
+    shipped.insert(byName.begin(), byName.end());
+    CHECK(known.size() == shipped.size() + 1);
+    CHECK(Finds::KnownLinks(withLinks("not json").get()) == shipped);
+    CHECK(Finds::KnownLinks(cut().get()) == shipped);
     CHECK(Finds::KnownLinks(nullptr) == Links::Shipped());
+}
+
+TEST_CASE("Every chest of the game's tables gets its type by name, the shipped ones agree", "[finds]") {
+    auto catalog = installedPack();
+    if (!catalog || !catalog->game.gadgetCount())
+        SKIP("no items pack with the game's tables on this PC");
+    Links::Known byName = Links::ChestsByName(catalog->game);
+    // 7.2 has 118 such chests, a later version more
+    CHECK(byName.size() >= 118);
+    // named Lv4, they sit on Remarkable Chest markers
+    const std::set<uint32_t> remarkable = { 70211150, 70211151 };
+    for (auto& [gadget, type] : Links::Shipped()) {
+        auto named = byName.find(gadget);
+        if (named == byName.end())
+            continue;
+        INFO("gadget " << gadget);
+        CHECK((remarkable.count(gadget) ? type == 269 : named->second == type));
+    }
+    // Snezhnaya's, the ones under water and on land and water, and the frozen ones are in
+    CHECK(byName.at(73174100) == 44);
+    CHECK(byName.at(70211199) == 46);
+    CHECK(byName.at(70211189) == 45);
+    CHECK(byName.at(70211104) == 75);
 }
 
 TEST_CASE("The learned file's votes come back, and one that doesn't read is kept aside", "[finds]") {

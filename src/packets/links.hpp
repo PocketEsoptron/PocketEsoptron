@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -121,6 +122,12 @@ namespace Links {
 
     // the links the build ships, learned on the test recordings and checked against the gadget names
     extern Known Shipped();
+    // the chest type a Chest gadget's name gives, "SceneObj_Chest_Locked_Lv2" is an
+    // Exquisite Chest: a Bramble, Frozen or Rock chest is a Sealed Chest, the rest
+    // go by their level. 0 for a Lv3, fake, drop or ticket chest and other names
+    extern int ChestByName(std::string_view name);
+    // ChestByName of every Chest gadget in the tables that gives a type
+    extern Known ChestsByName(const GameTables::Tables& tables);
     // [{gadget, type}] and back, false when it doesn't read
     extern std::string KnownToJson(const Known& known);
     extern bool KnownFromJson(const std::string& text, Known& out);
