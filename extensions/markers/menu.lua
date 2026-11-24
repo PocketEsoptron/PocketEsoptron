@@ -1,11 +1,12 @@
 -- The menu page: search, where (everywhere, where I am, picked regions), the
--- saved sets, collected and its sync, and the groups down the side with their
--- types as rows beside.
+-- switch for marking what's collected by itself, the saved sets, collected and
+-- its sync, and the groups down the side with their types as rows beside.
 
 local catalog = require("catalog")
 local selection = require("selection")
 local collected = require("collected")
 local collectedPage = require("collectedpage")
+local finds = require("finds")
 
 local menu = {}
 
@@ -93,6 +94,53 @@ local function searchAndWhere()
         elseif picked == "Where I am" then selection.setHere(true)
         elseif selection.here then selection.setHere(false) end
     end
+end
+
+-- what turning it on needs: the overlay reading the game's traffic, and the
+-- server for the things that come back at its daily reset
+local function askWhatAutoNeeds()
+    if not GetGameTraffic().on then AskForPermission("Game traffic") end
+    if PermissionState("game_server") ~= "allowed" or not GetGameServer() then AskForPermission("game_server") end
+end
+
+-- whether the overlay's map items can tell what's collected: the puzzles it
+-- always knows are auto, so no auto type means a list from before that
+local function itemsKnowFinds()
+    for _, group in ipairs(catalog.groups) do
+        for _, kind in ipairs(group.types) do
+            if kind.auto then return true end
+        end
+    end
+    return false
+end
+
+-- the switch, with a line inside it only while something stops it, and the
+-- button that fixes it under it
+local function autoRow()
+    local traffic, items = GetGameTraffic(), GetItems()
+    local noServer = PermissionState("game_server") ~= "allowed" or not GetGameServer()
+    local lines, fix = {}, nil
+    if finds.auto then
+        if not traffic.on then
+            lines[1] = "Needs the overlay to read the game's traffic."
+            fix = { "Turn on game traffic", function() AskForPermission("Game traffic") end }
+        elseif traffic.state ~= "reading" then
+            lines[1] = traffic.text
+        elseif not itemsKnowFinds() then
+            lines[1] = "The map items need updating."
+            fix = { "Check for new map items", CheckForMapItems, { busy = items.checking and "Checking..." } }
+        elseif noServer then
+            lines[1] = "Plants that come back at the daily reset wait until you pick your server."
+            fix = { "Pick my server", function() AskForPermission("game_server") end }
+        end
+    end
+    local on = ImGUI_Toggle("Auto-mark##auto", finds.auto, { lines = lines })
+    ImGUI_Tooltip("Marks chests, puzzles and pickups as you collect them. Plants and ores unmark again when they grow back.")
+    if on ~= finds.auto then
+        finds.setAuto(on)
+        if on then askWhatAutoNeeds() end
+    end
+    if fix then ImGUI_Button(fix[1], fix[2], fix[3]) end
 end
 
 -- the regions as chips, only while picking them
@@ -298,6 +346,7 @@ function menu.draw()
     end
 
     searchAndWhere()
+    autoRow()
     regionChips()
 
     -- what's on the map, and Clear beside it; it asks first, it takes everything off

@@ -189,6 +189,38 @@ namespace Finds {
     // the newest find's id, 0 before the first of the run
     extern uint64_t LastId();
 
+    // What the overlay itself found picked up that grows back, and when, by map
+    // item: a sure find's point, an unsure one's every candidate. An object seen
+    // again is back at once. The marks job unmarks only these without asking
+    // (Marks::SetGrownBack), so nothing an extension says goes in.
+    class GrowingRecord {
+    public:
+        // false when it changed nothing
+        bool Add(const Found& found, int64_t now);
+        // every one of the points is in it and back by now
+        bool AllBack(const std::set<int64_t>& points, int64_t now) const;
+        // false when none of them was in it
+        bool Unmarked(const std::set<int64_t>& points);
+        std::string ToJson() const;
+        // ones back longer than FORGET ago are left out
+        void FromJson(const std::string& text, int64_t now);
+        size_t Size() const { return m_points.size(); }
+
+        // one never unmarked is let go after this long back, in seconds
+        static constexpr int64_t FORGET = 30 * 24 * 3600;
+
+    private:
+        struct Entry {
+            int64_t at = 0;
+            // every object picked that may have been it, (group, config)
+            std::set<std::pair<uint32_t, uint32_t>> objects;
+        };
+        std::map<int32_t, Entry> m_points;
+    };
+    // the running record (growing-finds.json in the data folder), by the clock now
+    extern bool AllGrownBack(const std::set<int64_t>& points);
+    extern void Unmarked(const std::set<int64_t>& points);
+
     // AutoTypes of the items pack in use and of what the running Finder learned,
     // none while the game's traffic isn't read or the pack has no game tables,
     // and a number that goes up each time they change

@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -685,6 +686,55 @@ TEST_CASE("Marks_Start asks the player before unmarking several, the answer deci
         }
         run.sites.hoyolab[2].clear();
     }
+    TestExtension::unloadAll();
+}
+
+TEST_CASE("unmarking several the overlay's own finds say grew back isn't asked, a list with one more is") {
+    Asks::clear();
+    Running run;
+    std::set<int64_t> heard;
+    const std::set<int64_t> grown = { 17630, 17631 };
+    struct Unset {
+        ~Unset() { Marks::SetGrownBack({}); }
+    } unset;
+    Marks::SetGrownBack({
+        [&](const std::set<int64_t>& points) { return std::includes(grown.begin(), grown.end(), points.begin(), points.end()); },
+        [&](const std::set<int64_t>& points) { heard.insert(points.begin(), points.end()); } });
+    Extensions::Extension* ext = TestExtension::load("marks_grown", "function Init() end");
+    REQUIRE(ext);
+    Extensions::allow(*ext, Permission::HoyolabMapAccount);
+    Extensions::runInit(*ext);
+    sol::state& lua = *ext->luaState;
+    auto unmark = [&](const char* ids) {
+        REQUIRE(TestExtension::run(ext, std::string(R"(
+            _G.done = nil
+            Marks_Start("hoyolab_map", "change", {}, )") + ids + R"(, function(result) _G.done = result end)
+        )"));
+        auto started = std::chrono::steady_clock::now();
+        while (lua["done"] == sol::lua_nil && Asks::queue().empty() && std::chrono::steady_clock::now() - started < std::chrono::seconds(5))
+            TestExtension::turn();
+    };
+
+    run.sites.hoyolab[2] = { 17629, 17630, 17631 };
+    unmark("{ 17631, 17630 }");
+    CHECK(Asks::queue().empty());
+    sol::table done = lua["done"];
+    REQUIRE(done.valid());
+    CHECK(done["hoyolab_map"]["removed"].get<int>() == 2);
+    CHECK(run.sites.hoyolab[2] == std::set<int64_t>{ 17629 });
+    CHECK(heard == grown);
+
+    // one it didn't find picked: the player is asked about all of them
+    run.sites.hoyolab[2] = { 17629, 17630, 17631 };
+    unmark("{ 17631, 17630, 17629 }");
+    REQUIRE(Asks::queue().size() == 1);
+    CHECK(Asks::queue().front().unmarkPoints == 3);
+    Asks::answer(Asks::Answer::DontAllow);
+    auto started = std::chrono::steady_clock::now();
+    while (lua["done"] == sol::lua_nil && std::chrono::steady_clock::now() - started < std::chrono::seconds(5)) TestExtension::turn();
+    CHECK(run.sites.hoyolab[2] == std::set<int64_t>{ 17629, 17630, 17631 });
+
+    run.sites.hoyolab[2].clear();
     TestExtension::unloadAll();
 }
 

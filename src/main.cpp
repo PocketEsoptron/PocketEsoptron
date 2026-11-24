@@ -288,6 +288,8 @@ int main(int argc, char** argv) {
     if (Settings::checkUpdates) UpdateCheck::Start();
     else UpdateCheck::Stop();
 
+    // what grew back by the overlay's own finds comes off without a question
+    Marks::SetGrownBack({ Finds::AllGrownBack, Finds::Unmarked });
     Marks::Init();
     MapTracking::Start(Helpers::dataDirectory() / "map_data");
     ItemFiles::Start(Helpers::dataDirectory() / "items", Settings::downloadItems);

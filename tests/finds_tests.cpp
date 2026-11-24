@@ -396,3 +396,48 @@ TEST_CASE("The learned file's votes come back, and one that doesn't read is kept
     CHECK(Files::readText(folder / "learned-links.json.broken") == "not json");
     std::filesystem::remove_all(folder);
 }
+
+TEST_CASE("The overlay's own record says a picked Starconch grew back only once it has, and lets it go when unmarked", "[finds]") {
+    std::filesystem::path folder;
+    for (const std::filesystem::path& recording : RecordedMessages::recordings())
+        if (recording.filename() == "2026-10-14_21-47") folder = recording;
+    auto catalog = installedPack();
+    if (folder.empty() || !catalog || !catalog->game.knowsRanks())
+        SKIP("no 2026-10-14_21-47 recording or no items pack with ranks on this PC");
+    std::vector<Finds::Found> found = play(folder / "messages.bin", catalog, Learner::Shipped()).found;
+    REQUIRE(found.size() == 2);
+    const int64_t picked = 1792007349, back = picked + 48 * 3600;
+
+    Finds::GrowingRecord record;
+    for (const Finds::Found& f : found) record.Add(f, picked);
+    // the chest doesn't grow back, the Starconch does
+    CHECK(record.Size() == 1);
+    CHECK_FALSE(record.AllBack({ 4620 }, back - 1));
+    CHECK(record.AllBack({ 4620 }, back));
+    // a point it never found, or the chest, isn't vouched for, and neither is a list holding one
+    CHECK_FALSE(record.AllBack({ 4831 }, back));
+    CHECK_FALSE(record.AllBack({ 4620, 4831 }, back));
+    CHECK_FALSE(record.AllBack({}, back));
+
+    // saved and read back the same, and let go a month after it was back
+    Finds::GrowingRecord saved;
+    saved.FromJson(record.ToJson(), back);
+    CHECK(saved.AllBack({ 4620 }, back));
+    saved.FromJson(record.ToJson(), back + Finds::GrowingRecord::FORGET + 1);
+    CHECK(saved.Size() == 0);
+    saved.FromJson("not json", back);
+    CHECK(saved.Size() == 0);
+
+    // its object seen again: back at once
+    Finds::Found again = found[1];
+    again.how = Finds::How::Back;
+    again.point = 0;
+    CHECK(record.Add(again, picked + 3600));
+    CHECK(record.AllBack({ 4620 }, picked + 3600));
+
+    // unmarked: nothing to vouch for any more
+    CHECK(record.Unmarked({ 4620 }));
+    CHECK_FALSE(record.AllBack({ 4620 }, back));
+    CHECK_FALSE(record.Unmarked({ 4620 }));
+}
+

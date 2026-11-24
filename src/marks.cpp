@@ -325,6 +325,7 @@ namespace Marks {
     static constexpr auto NAME_AGAIN = std::chrono::minutes(5);
 
     static LoginFor loginFor;
+    static GrownBack grownBack;
     static Sender sender;
     static std::filesystem::path testFolder;
 
@@ -751,7 +752,14 @@ namespace Marks {
             for (Work* work : ready) {
                 for (int64_t own : work->plan.remove) removing.insert(ourId(*work, own));
             }
-            if (removing.size() > 1) {
+            GrownBack back;
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                back = grownBack;
+            }
+            // the overlay's own finds say these all grew back: nothing to ask
+            bool vouched = request.owner && back.all && !removing.empty() && back.all(removing);
+            if (removing.size() > 1 && !vouched) {
                 // more marked meanwhile than the player was asked about: asked again
                 bool seen = std::includes(job.answered.begin(), job.answered.end(), removing.begin(), removing.end());
                 Choice choice = !request.owner ? Choice::Keep : seen ? job.answer : Choice::None;
@@ -783,6 +791,12 @@ namespace Marks {
                 }
                 work->result.ok = work->result.site == Site::HoyolabMap ? writeHoyolab(*work, *catalog) : writeAppsample(*work);
             }
+            std::set<int64_t> off;
+            for (Work* work : ready) {
+                if (!work->result.ok) continue;
+                for (int64_t own : work->plan.remove) off.insert(ourId(*work, own));
+            }
+            if (!off.empty() && back.unmarked) back.unmarked(off);
         }
 
         for (Work& work : works) wipe(work.login);
@@ -838,6 +852,11 @@ namespace Marks {
         }
         std::lock_guard<std::mutex> lock(mutex);
         stopper = nullptr;
+    }
+
+    void SetGrownBack(GrownBack back) {
+        std::lock_guard<std::mutex> lock(mutex);
+        grownBack = std::move(back);
     }
 
     void Init() {

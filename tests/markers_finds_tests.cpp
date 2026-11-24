@@ -9,6 +9,7 @@
 // overlay gives on 2026-11-22_play: two Wooden Mora Chests side by side in
 // group 133114067, 67006 opened first while 67005 stood as near to 65365,
 // then 67005 on 65365 (finds_tests). The player ticked 65365 and 65366.
+// starconch is the Starconch picked on 2026-10-14_21-47, back 48 h later.
 
 namespace fs = std::filesystem;
 
@@ -33,7 +34,8 @@ namespace {
                 WriteFile = function(name, data) files[name] = data return true end
                 JSON_Encode = copy
                 JSON_Decode = copy
-                GetOSTimeMS = function() return 1795365183885 end
+                clock = 1795365183885
+                GetOSTimeMS = function() return clock end
                 -- what the overlay found, GetFinds gives the ones after an id
                 given = {}
                 GetFinds = function(after)
@@ -44,6 +46,12 @@ namespace {
                 first = { id = 1795365183884001, how = "opened", type = 129, object = "133114067/67006",
                     maybe = { 65365, 65366 }, rivals = { "133114067/67005" } }
                 second = { id = 1795365183884002, how = "opened", type = 129, object = "133114067/67005", point = 65365 }
+                -- what Markers gave the overlay last
+                SetFindsDone = function(done, growing) givenDone, givenGrowing = done, growing end
+                -- the Starconch's object seen again a day later
+                starconchBack = { id = 1792093749676001, how = "back", type = 78, object = "133105804/154004" }
+                starconch = { id = 1792007349676001, how = "picked_up", type = 78, object = "133105804/154004",
+                    point = 4620, item = 100033, back_at = 1792180149 }
                 function start()
                     for _, name in ipairs({ "collected", "finds" }) do package.loaded[name] = nil end
                     collected = require("collected")
@@ -151,4 +159,73 @@ TEST_CASE("A waiting find and the last one taken are kept over a restart", "[mar
         finds.update()
     )");
     CHECK(m.collected() == std::set<int>{ 65365 });
+}
+
+TEST_CASE("A find of a thing that grows back is ticked until it's back", "[markers]") {
+    Markers m;
+    m.run("clock = 1792007350000 found(starconch) finds.tick()");
+    CHECK(m.collected() == std::set<int>{ 4620 });
+    m.run("clock = 1792180148999 finds.tick()");
+    CHECK(m.collected() == std::set<int>{ 4620 });
+    m.run("clock = 1792180149000 finds.tick()");
+    CHECK(m.collected().empty());
+    CHECK(m.lua.script("return finds.backAt(4620) == nil").get<bool>());
+}
+
+TEST_CASE("When a thing grows back is kept over a restart", "[markers]") {
+    Markers m;
+    m.run("clock = 1792007350000 found(starconch) finds.tick()");
+    m.run("clock = 1792200000000 start() finds.tick()");
+    CHECK(m.collected().empty());
+}
+
+TEST_CASE("A grow-back tick taken off and put back by hand stays", "[markers]") {
+    Markers m;
+    m.run("clock = 1792007350000 found(starconch) collected.set(4620, false, 'tap') collected.set(4620, true, 'tap') finds.tick()");
+    m.run("clock = 1792200000000 finds.tick()");
+    CHECK(m.collected() == std::set<int>{ 4620 });
+}
+
+TEST_CASE("A grow-back tick comes off when the overlay sees its object again", "[markers]") {
+    Markers m;
+    m.run("clock = 1792007350000 found(starconch) finds.tick()");
+    CHECK(m.collected() == std::set<int>{ 4620 });
+    m.run("clock = 1792093750000 found(starconchBack) finds.tick()");
+    CHECK(m.collected().empty());
+    CHECK(m.lua.script("return finds.backAt(4620) == nil").get<bool>());
+    // and stays off over a restart and past its old time
+    m.run("start() clock = 1792200000000 finds.tick()");
+    CHECK(m.collected().empty());
+}
+
+TEST_CASE("A back find of an object Markers doesn't wait on changes nothing", "[markers]") {
+    Markers m;
+    m.run("collected.set(4620, true, 'tap') clock = 1792093750000 found(starconchBack) finds.tick()");
+    CHECK(m.collected() == std::set<int>{ 4620 });
+}
+
+TEST_CASE("The ticks and the object waiting to grow back go to the overlay, also after a restart", "[markers]") {
+    Markers m;
+    m.run("collected.set(65365, true, 'tap') clock = 1792007350000 found(starconch) finds.tick()");
+    auto check = [&] {
+        CHECK(m.lua.script("return #givenDone == 2 and givenDone[1] == 4620 and givenDone[2] == 65365").get<bool>());
+        CHECK(m.lua.script(R"(
+            local g = givenGrowing
+            return #g == 1 and g[1].object == "133105804/154004" and #g[1].points == 1 and g[1].points[1] == 4620
+                and g[1].back_at == 1792180149
+        )").get<bool>());
+    };
+    check();
+    m.run("givenDone, givenGrowing = nil, nil start() finds.tick()");
+    check();
+}
+
+TEST_CASE("With auto off a find ticks nothing, also once it's on again", "[markers]") {
+    Markers m;
+    m.run("finds.setAuto(false) clock = 1792007350000 found(starconch) finds.tick()");
+    CHECK(m.collected().empty());
+    m.run("start()");
+    CHECK_FALSE(m.lua.script("return finds.auto").get<bool>());
+    m.run("finds.setAuto(true) finds.update() finds.tick()");
+    CHECK(m.collected().empty());
 }

@@ -9,6 +9,7 @@ metadata = {
         network = { reason = "For the comments: the marker's picture, text and appsample's comments." },
         hoyolab_map_account = { reason = "To keep what you collected the same as your marks on HoYoLAB Map." },
         appsample_account = { reason = "To keep what you collected the same as your marks on appsample." },
+        game_server = { reason = "Some plants and ores come back at the server's daily reset, so it knows when to unmark them." },
     },
 }
 

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 #include <mutex>
+#include <nlohmann/json.hpp>
 #include "../files.hpp"
 #include "../game_tables.hpp"
 #include "../helpers.hpp"
@@ -512,6 +513,131 @@ namespace Finds {
             mergeDone();
     }
 
+    bool GrowingRecord::Add(const Found& found, int64_t now) {
+        bool changed = false;
+        // let go of the ones never unmarked
+        for (auto it = m_points.begin(); it != m_points.end();) {
+            if (it->second.at < now - FORGET) {
+                it = m_points.erase(it);
+                changed = true;
+            } else {
+                ++it;
+            }
+        }
+        if (found.how == How::Back) {
+            if (!found.group)
+                return changed;
+            for (auto& [point, entry] : m_points)
+                if (entry.objects.count({ found.group, found.config }) && entry.at > now) {
+                    entry.at = now;
+                    changed = true;
+                }
+            return changed;
+        }
+        if (found.backAt <= 0 || found.how == How::Solved)
+            return changed;
+        std::vector<int32_t> points = found.candidates;
+        if (found.point)
+            points = { found.point };
+        for (int32_t point : points) {
+            Entry& entry = m_points[point];
+            // picked again after it grew back: the earlier pickups are over
+            if (entry.at <= now)
+                entry.objects.clear();
+            entry.at = std::max(entry.at, found.backAt);
+            if (found.group)
+                entry.objects.insert({ found.group, found.config });
+            changed = true;
+        }
+        return changed;
+    }
+
+    bool GrowingRecord::AllBack(const std::set<int64_t>& points, int64_t now) const {
+        if (points.empty())
+            return false;
+        for (int64_t point : points) {
+            auto it = point >= 1 && point <= INT32_MAX ? m_points.find((int32_t)point) : m_points.end();
+            if (it == m_points.end() || it->second.at > now)
+                return false;
+        }
+        return true;
+    }
+
+    bool GrowingRecord::Unmarked(const std::set<int64_t>& points) {
+        bool changed = false;
+        for (int64_t point : points)
+            if (point >= 1 && point <= INT32_MAX)
+                changed = m_points.erase((int32_t)point) > 0 || changed;
+        return changed;
+    }
+
+    std::string GrowingRecord::ToJson() const {
+        nlohmann::json list = nlohmann::json::array();
+        for (const auto& [point, entry] : m_points) {
+            nlohmann::json objects = nlohmann::json::array();
+            for (const auto& [group, config] : entry.objects)
+                objects.push_back({ group, config });
+            list.push_back({ { "point", point }, { "at", entry.at }, { "objects", std::move(objects) } });
+        }
+        return nlohmann::json({ { "points", std::move(list) } }).dump();
+    }
+
+    void GrowingRecord::FromJson(const std::string& text, int64_t now) {
+        m_points.clear();
+        nlohmann::json all = nlohmann::json::parse(text, nullptr, false);
+        if (!all.is_object() || !all.contains("points") || !all["points"].is_array())
+            return;
+        for (const nlohmann::json& each : all["points"]) {
+            if (!each.is_object())
+                continue;
+            int64_t point = each.value("point", (int64_t)0), at = each.value("at", (int64_t)0);
+            if (point < 1 || point > INT32_MAX || at <= 0 || at < now - FORGET)
+                continue;
+            Entry entry;
+            entry.at = at;
+            if (each.contains("objects") && each["objects"].is_array())
+                for (const nlohmann::json& object : each["objects"])
+                    if (object.is_array() && object.size() == 2 && object[0].is_number_unsigned() && object[1].is_number_unsigned())
+                        entry.objects.insert({ object[0].get<uint32_t>(), object[1].get<uint32_t>() });
+            m_points[(int32_t)point] = std::move(entry);
+        }
+    }
+
+    static const char* GROWING_FILE = "growing-finds.json";
+    static std::mutex growingMutex;
+    static GrowingRecord growing;
+    static std::filesystem::path growingFile;
+
+    static int64_t unixNow() {
+        return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    static void saveGrowing() {
+        if (!growingFile.empty() && !Files::writeFile(growingFile, growing.ToJson()))
+            std::cout << "Map items: can't write " << Helpers::utf8(growingFile) << std::endl;
+    }
+
+    static void recordGrowing(const std::vector<Found>& found) {
+        std::lock_guard lock(growingMutex);
+        int64_t now = unixNow();
+        bool changed = false;
+        for (const Found& f : found)
+            changed = growing.Add(f, now) || changed;
+        if (changed)
+            saveGrowing();
+    }
+
+    bool AllGrownBack(const std::set<int64_t>& points) {
+        std::lock_guard lock(growingMutex);
+        return growing.AllBack(points, unixNow());
+    }
+
+    void Unmarked(const std::set<int64_t>& points) {
+        std::lock_guard lock(growingMutex);
+        if (growing.Unmarked(points))
+            saveGrowing();
+    }
+
     static std::mutex mutex;
     static std::shared_ptr<Running> running;
     static int worldListener = 0;
@@ -637,6 +763,11 @@ namespace Finds {
         running->saves = LoadVotes(running->file, running->links);
         running->saved = std::chrono::steady_clock::now();
         setLearned(running->links);
+        {
+            std::lock_guard growingLock(growingMutex);
+            growingFile = folder / GROWING_FILE;
+            growing.FromJson(Files::readText(growingFile), unixNow());
+        }
         worldListener = World::AddListener([](const World::Event& event) {
             std::vector<Found> found;
             {
@@ -679,6 +810,7 @@ namespace Finds {
                 }
                 std::cout << " (type " << f.type << ")" << std::endl;
             }
+            recordGrowing(found);
             keep(found);
             std::vector<std::pair<int, Listener>> now;
             {
