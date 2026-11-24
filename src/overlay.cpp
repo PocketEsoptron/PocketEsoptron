@@ -18,6 +18,7 @@
 #include "minimap.hpp"
 #include "stats.hpp"
 #include "settings.hpp"
+#include "game_server.hpp"
 #include "capture.hpp"
 #include "triggers.hpp"
 #include "screen_pictures.hpp"
@@ -1129,6 +1130,21 @@ namespace Overlay {
         Controls::EndSection();
     }
 
+    // the server the player's game account is on, and the extensions allowed to see it
+    static void DrawGameServer() {
+        const GameServer::Server* server = GameServer::picked();
+        if (!Controls::BeginSection("Game server", false, false, { std::string(server ? server->label : "Not picked") })) return;
+        GameServer::drawChoice();
+        std::string users;
+        for (const auto& ext : Extensions::registeredExtensions) {
+            if (!ext->extensionPermissions.count(Extensions::ExtensionPermissionTypes::GameServer)) continue;
+            users += (users.empty() ? "" : ", ") + ext->name;
+        }
+        if (users.empty()) ImGui::TextDisabled("No extension can see it.");
+        else ImGui::TextWrapped("Used by: %s", users.c_str());
+        Controls::EndSection();
+    }
+
     // the overlay's logins, and the extensions allowed to use each
     static void DrawAccounts() {
         Controls::PageTitle("Accounts");
@@ -1190,6 +1206,7 @@ namespace Overlay {
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         ImGui::TextWrapped("Logging out keeps who's allowed. Logging in as another account switches them all off again.");
         ImGui::PopStyleColor();
+        DrawGameServer();
     }
 
     // an extension in the page order, by its folder

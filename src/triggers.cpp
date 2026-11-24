@@ -1,12 +1,14 @@
 #include "triggers.hpp"
 #include "screen_pictures.hpp"
 #include "asks.hpp"
+#include "game_server.hpp"
 #include "item_catalog.hpp"
 #include "lua_functions.hpp"
 #include "overlay.hpp"
 #include "settings.hpp"
 #include <algorithm>
 #include <cstdio>
+#include <ctime>
 #include <iostream>
 #include <map>
 
@@ -14,7 +16,7 @@ namespace Triggers {
 	using Extensions::Extension;
 	using Permission = Extensions::ExtensionPermissionTypes;
 
-	enum class Kind { Screens, ScreenPicture, MapView, Player, Items, GameTraffic, Account, Page, Setting, Permission, Look };
+	enum class Kind { Screens, ScreenPicture, MapView, Player, Items, GameTraffic, GameServer, Account, Page, Setting, Permission, Look };
 
 	static const std::vector<std::pair<std::string, Kind>> kinds = {
 		{ "Screens", Kind::Screens },
@@ -23,6 +25,7 @@ namespace Triggers {
 		{ "Player", Kind::Player },
 		{ "Items", Kind::Items },
 		{ "GameTraffic", Kind::GameTraffic },
+		{ "GameServer", Kind::GameServer },
 		{ "Account", Kind::Account },
 		{ "Page", Kind::Page },
 		{ "Setting", Kind::Setting },
@@ -53,6 +56,7 @@ namespace Triggers {
 		case Kind::Player: return { "found", "lost", "moved" };
 		case Kind::Items: return { "list", "loading" };
 		case Kind::GameTraffic: return { "on", "state" };
+		case Kind::GameServer: return { "server", "reset" };
 		case Kind::Account: return { "hoyolab_map", "appsample" };
 		case Kind::Page: return { "shown", "hidden" };
 		case Kind::Look: return { "look", "dark", "accent", "size" };
@@ -88,6 +92,7 @@ namespace Triggers {
 
 	static Permission needs(Kind kind) {
 		if (kind == Kind::ScreenPicture) return Permission::DisplayRead;
+		if (kind == Kind::GameServer) return Permission::GameServer;
 		return needsMapInfo(kind) ? Permission::MapInfo : Permission::None;
 	}
 
@@ -102,6 +107,7 @@ namespace Triggers {
 		const Extension* ext = trigger.owner;
 		if (!ext || ext->stopped || ext->closing || !ext->stopReason.empty()) return false;
 		if (trigger.kind == Kind::ScreenPicture) return ext->extensionPermissions.count(Permission::DisplayRead) > 0;
+		if (trigger.kind == Kind::GameServer) return ext->extensionPermissions.count(Permission::GameServer) > 0;
 		return !needsMapInfo(trigger.kind) || ext->extensionPermissions.count(Permission::MapInfo) > 0;
 	}
 
@@ -188,6 +194,12 @@ namespace Triggers {
 			parts["on"] = now.trafficOn ? "1" : "0";
 			parts["state"] = std::string(GameTraffic::StateCode(now.traffic)) + " " + GameTraffic::ReasonCode(now.traffic);
 			break;
+		case Kind::GameServer: {
+			parts["server"] = now.gameServer;
+			const GameServer::Server* server = GameServer::find(now.gameServer);
+			parts["reset"] = server ? std::to_string(GameServer::nextReset(*server, now.time)) : "";
+			break;
+		}
 		case Kind::Account:
 			for (Accounts::Site site : { Accounts::Site::HoyolabMap, Accounts::Site::Appsample }) {
 				const Accounts::Status& status = now.accounts[(size_t)site];
@@ -249,6 +261,10 @@ namespace Triggers {
 			if (has("on")) events.push_back("on");
 			if (has("state")) events.push_back("state");
 			return events;
+		case Kind::GameServer:
+			if (has("server")) events.push_back("server");
+			if (has("reset")) events.push_back("reset");
+			return events;
 		case Kind::Page:
 			if (has("shown")) events.push_back(now.at("shown") == "1" ? "shown" : "hidden");
 			return events;
@@ -262,7 +278,7 @@ namespace Triggers {
 
 	// one topic, one run: the biggest change, or the one asked for with only
 	static bool oneRun(Kind kind) {
-		return kind == Kind::MapView || kind == Kind::Player || kind == Kind::Items || kind == Kind::GameTraffic;
+		return kind == Kind::MapView || kind == Kind::Player || kind == Kind::Items || kind == Kind::GameTraffic || kind == Kind::GameServer;
 	}
 
 	struct Due {
@@ -279,6 +295,7 @@ namespace Triggers {
 		case Kind::Player: return LuaFunctions::playerTable(now.player, lua);
 		case Kind::Items: return LuaFunctions::Items::table(now.itemsVersion, now.items, lua);
 		case Kind::GameTraffic: return LuaFunctions::gameTrafficTable(now.trafficOn, now.traffic, lua);
+		case Kind::GameServer: return LuaFunctions::gameServerTable(now.gameServer, now.time, lua);
 		case Kind::Account: {
 			Accounts::Site site = Accounts::SiteNamed(changed).value_or(Accounts::Site::HoyolabMap);
 			return LuaFunctions::accountTable(site, now.accounts[(size_t)site], lua);
@@ -300,6 +317,7 @@ namespace Triggers {
 		std::string what = "trigger " + it->name;
 		if (needsMapInfo(kind)) Extensions::markUsed(*owner, Permission::MapInfo);
 		if (kind == Kind::ScreenPicture) Extensions::markUsed(*owner, Permission::DisplayRead);
+		if (kind == Kind::GameServer) Extensions::markUsed(*owner, Permission::GameServer);
 		Extensions::runForExtension(owner, [&]() {
 			sol::state_view lua(function.lua_state());
 			sol::protected_function_result result = function(given(kind, due.changed, now, lua), due.changed);
@@ -379,6 +397,8 @@ namespace Triggers {
 		now.items = ItemFiles::GetStatus();
 		now.trafficOn = Settings::readGameTraffic;
 		now.traffic = GameTraffic::GetStatus();
+		now.gameServer = Settings::gameServer;
+		now.time = (int64_t)std::time(nullptr);
 		now.accounts = { Accounts::Get(Accounts::Site::HoyolabMap), Accounts::Get(Accounts::Site::Appsample) };
 		now.pageShown = Overlay::ShownExtension();
 		Controls::Theme theme = Controls::GetTheme();

@@ -23,6 +23,7 @@
 #include "screen_pictures.hpp"
 #include "packets/game_traffic.hpp"
 #include "accounts.hpp"
+#include "game_server.hpp"
 #include "marks.hpp"
 #include <imgui.h>
 #include <iostream>
@@ -36,6 +37,7 @@
 #include "point_guides.hpp"
 #include "language.hpp"
 #include <chrono>
+#include <ctime>
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -219,6 +221,7 @@ namespace LuaFunctions {
 		global("GetItemRegions", MapInfo, GetItemRegions);
 		global("GetItemIcon", MapInfo, GetItemIcon);
 		global("GetGameTraffic", None, GetGameTraffic);
+		global("GetGameServer", Permission::GameServer, GetGameServer);
 
 		// the player's logins, each site's account permission checked inside
 		global("GetAccount", None, GetAccount);
@@ -2810,6 +2813,22 @@ namespace LuaFunctions {
 	sol::table GetGameTraffic(sol::this_state state)
 	{
 		return gameTrafficTable(Settings::readGameTraffic, GameTraffic::GetStatus(), state);
+	}
+
+	sol::object gameServerTable(const std::string& key, int64_t now, sol::state_view lua)
+	{
+		const GameServer::Server* server = GameServer::find(key);
+		if (!server) return sol::make_object(lua, sol::lua_nil);
+		return lua.create_table_with(
+			"server", std::string(server->key),
+			"name", std::string(server->label),
+			"utcOffset", server->utcOffset,
+			"nextReset", GameServer::nextReset(*server, now));
+	}
+
+	sol::object GetGameServer(sol::this_state state)
+	{
+		return gameServerTable(Settings::gameServer, (int64_t)std::time(nullptr), state);
 	}
 
 	static Permission accountPermission(Accounts::Site site) {

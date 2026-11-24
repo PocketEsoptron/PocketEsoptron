@@ -123,6 +123,16 @@ namespace LuaFunctions {
     sol::table GetGameTraffic(sol::this_state state);
     // what GetGameTraffic and the GameTraffic trigger give
     sol::table gameTrafficTable(bool on, const GameTraffic::Status& status, sol::state_view lua);
+    // GetGameServer(), with the Game server permission: { server, name,
+    // utcOffset, nextReset }. server is america, europe, asia, tw_hk_mo or
+    // china, name what the menu shows, utcOffset the server's clock against
+    // UTC in hours, nextReset the Unix second the game's next day starts
+    // (4:00 server time). Nil until the player picks one.
+    sol::object GetGameServer(sol::this_state state);
+    // what GetGameServer and the GameServer trigger give, for a server key
+    // at a Unix second. The trigger's changed is "server" or "reset" (a
+    // new game day).
+    sol::object gameServerTable(const std::string& key, int64_t now, sol::state_view lua);
     // GetAccount("hoyolab_map" or "appsample"): { site, state, problem, account }.
     // state is logged_out, window_open, logged_in, needs_login or captcha,
     // problem what went wrong last for the player, "" when nothing did.

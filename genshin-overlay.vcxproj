@@ -190,6 +190,7 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClCompile Include="src\overlay.cpp" />
     <ClCompile Include="src\point_guides.cpp" />
     <ClCompile Include="src\packets\frames.cpp" />
+    <ClCompile Include="src\game_server.cpp" />
     <ClCompile Include="src\game_traffic_text.cpp" />
     <ClCompile Include="src\packets\game_traffic.cpp" />
     <ClCompile Include="src\packets\kcp.cpp" />
@@ -249,6 +250,7 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClInclude Include="src\overlay.hpp" />
     <ClInclude Include="src\point_guides.hpp" />
     <ClInclude Include="src\packets\frames.hpp" />
+    <ClInclude Include="src\game_server.hpp" />
     <ClInclude Include="src\game_traffic_text.hpp" />
     <ClInclude Include="src\npcap_download.hpp" />
     <ClInclude Include="src\update_check.hpp" />

@@ -14,7 +14,7 @@
 
 // AddTrigger(name, function, only): the function runs once each time its
 // topic changes, with the table the topic's call gives (GetScreens,
-// GetMapView, GetPlayer, GetItems, GetGameTraffic, GetAccount...) and what changed. With only, it runs
+// GetMapView, GetPlayer, GetItems, GetGameTraffic, GetGameServer, GetAccount...) and what changed. With only, it runs
 // only when that is what changed. Nothing runs for the state at the start.
 
 namespace Triggers {
@@ -46,6 +46,9 @@ namespace Triggers {
         // what GetGameTraffic gives
         bool trafficOn = false;
         GameTraffic::Status traffic;
+        // the picked game server's key, "" for none, and the Unix second it's read at
+        std::string gameServer;
+        int64_t time = 0;
         // what GetAccount gives, by Accounts::Site
         std::array<Accounts::Status, 2> accounts;
         // the extension whose page the menu shows, by its place in registeredExtensions, -1 for none

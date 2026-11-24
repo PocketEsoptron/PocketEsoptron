@@ -36,7 +36,8 @@ namespace Extensions {
 		TakeClicks,
 		MapInfo,
 		HoyolabMapAccount,
-		AppsampleAccount
+		AppsampleAccount,
+		GameServer
 	};
 
 	// Saved in settings.json and named in Lua by name, shown to the player by
@@ -55,6 +56,7 @@ namespace Extensions {
 	inline const std::vector<PermissionInfo> permissionList = {
 		{ExtensionPermissionTypes::DisplayOverlay, "display_overlay", "Display Overlay", "It can draw on the overlay."},
 		{ExtensionPermissionTypes::MapInfo, "map_info", "Map info", "It can see where the map is, where you are and the map items."},
+		{ExtensionPermissionTypes::GameServer, "game_server", "Game server", "It can see which game server you play on."},
 		{ExtensionPermissionTypes::DisplayRead, "display_read", "Display Read", "It can see some game screens, like the map, with your UID hidden."},
 		{ExtensionPermissionTypes::Keybinds, "keybinds", "Keybinds", "It takes these keys while you play. The game won't see them."},
 		{ExtensionPermissionTypes::InternalReadfile, "internal_read", "Internal File Reading", "It can read files in its own folder."},
@@ -81,7 +83,7 @@ namespace Extensions {
 		ExtensionPermissionTypes::Dots
 	};
 
-	inline const int PermissionCount = (int)ExtensionPermissionTypes::AppsampleAccount + 1;
+	inline const int PermissionCount = (int)ExtensionPermissionTypes::GameServer + 1;
 
 	// nullptr for None and for a name this overlay doesn't know
 	const PermissionInfo* findPermission(ExtensionPermissionTypes type);
@@ -305,6 +307,8 @@ namespace Extensions {
 		std::map<std::string, std::string> pickedKeys;
 		// overlay settings it asked for and was refused this start
 		std::unordered_set<std::string> refusedSettings;
+		// Not now to picking the game server, asked again at the next start
+		bool serverPickRefused = false;
 		// the permissions its Lua files call for, and the ones it was refused
 		// that they didn't show (saved): its Permissions tab lists them
 		std::unordered_set<ExtensionPermissionTypes> uses;

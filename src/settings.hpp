@@ -43,6 +43,8 @@ namespace Settings {
     extern bool downloadItems;
     // Game traffic, off until the player turns it on in the menu
     extern bool readGameTraffic;
+    // the game server's key (GameServer), "" until the player picks one
+    extern std::string gameServer;
     // CPU and RAM on the Usage page's line in the page list
     extern bool usageInList;
     // ask GitHub once a day whether a newer version is out (UpdateCheck)

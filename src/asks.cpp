@@ -1,4 +1,5 @@
 #include "asks.hpp"
+#include "game_server.hpp"
 #include "helpers.hpp"
 #include "overlay.hpp"
 #include <imgui.h>
@@ -78,6 +79,10 @@ namespace Asks {
 	}
 
 	void askPermission(Extension& ext, Permission permission) {
+		if (permission == Permission::GameServer && ext.extensionPermissions.count(permission)) {
+			if (!ext.stopped && !GameServer::picked() && !ext.serverPickRefused) questionFor(ext, Kind::Server);
+			return;
+		}
 		if (ext.stopped || !Extensions::mayAsk(ext, permission) || hadBeforeChange(ext, permission)) return;
 		add(questionFor(ext, Kind::Permissions).permissions, permission);
 	}
@@ -188,6 +193,9 @@ namespace Asks {
 			if (answer == Answer::Allow) {
 				for (Permission permission : ask.permissions) Extensions::allow(ext, permission);
 				allowKeys(ext, ask.keys);
+				// allowed with none picked: the pick is asked next
+				bool server = std::find(ask.permissions.begin(), ask.permissions.end(), Permission::GameServer) != ask.permissions.end();
+				if (server) askPermission(ext, Permission::GameServer);
 			}
 			else {
 				bool never = answer == Answer::Never;
@@ -209,6 +217,9 @@ namespace Asks {
 			break;
 		case Kind::Unmark:
 			break;
+		case Kind::Server:
+			if (answer != Answer::Allow) ext.serverPickRefused = true;
+			break;
 		case Kind::Setting: {
 			const OverlaySetting* setting = findSetting(ask.setting);
 			if (answer == Answer::Allow && setting && setting->turnOn) setting->turnOn();
@@ -220,6 +231,7 @@ namespace Asks {
 		}
 		}
 
+		if (ask.kind == Kind::Server) return;
 		if (ask.kind != Kind::Setting || answer == Answer::Never) Extensions::saveExtensionPermissions(ext);
 		if (answer == Answer::Allow) {
 			Extensions::bindAllowedKeys(ext);
@@ -262,6 +274,7 @@ namespace Asks {
 			ImGui::TextUnformatted("asks for:");
 			for (Permission permission : ask.permissions) bullet(ext, *Extensions::findPermission(permission), ask.keys);
 		}
+		if (std::find(ask.permissions.begin(), ask.permissions.end(), Permission::GameServer) != ask.permissions.end()) GameServer::drawChoice();
 		if (Controls::Button("Allow")) { answered = Answer::Allow; done = true; }
 		ImGui::SameLine();
 		if (Controls::Button("Don't allow")) { answered = Answer::DontAllow; done = true; }
@@ -293,6 +306,14 @@ namespace Asks {
 		if (Controls::Button("Don't turn on")) { answered = Answer::DontAllow; done = true; }
 		ImGui::SameLine();
 		if (Controls::Button("Never ask again")) { answered = Answer::Never; done = true; }
+	}
+
+	static void drawServer(const Ask& ask, Answer& answered, bool& done) {
+		Extensions::drawName(*ask.ext);
+		ImGui::SameLine();
+		ImGui::TextUnformatted("asks which game server you play on.");
+		if (GameServer::drawChoice() && GameServer::picked()) { answered = Answer::Allow; done = true; }
+		if (Controls::Button("Not now")) { answered = Answer::NotNow; done = true; }
 	}
 
 	// "37 on HoYoLAB Map and 12 on appsample"
@@ -352,6 +373,11 @@ namespace Asks {
 	void draw(bool mapOpen, bool menuOpen) {
 		const Ask* ask = showing(mapOpen, menuOpen);
 		if (!ask) return;
+		// picked in the menu or switched off meanwhile, nothing left to ask
+		if (ask->kind == Kind::Server && (GameServer::picked() || !ask->ext->extensionPermissions.count(Permission::GameServer))) {
+			waiting.pop_front();
+			return;
+		}
 
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.4f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -362,8 +388,9 @@ namespace Asks {
 		}
 		ImGui::Begin("##question", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize |
 			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove);
-		// a window drawn after the menu stays over it
-		ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+		// a window drawn after the menu stays over it, under its own open drop-down
+		bool listOpen = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+		if (!listOpen) ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
 
 		Answer answered = Answer::NotNow;
 		bool done = false;
@@ -371,11 +398,17 @@ namespace Asks {
 		case Kind::Permissions: drawPermissions(*ask, answered, done); break;
 		case Kind::Changed: drawChanged(*ask, answered, done); break;
 		case Kind::Setting: drawSetting(*ask, answered, done); break;
+		case Kind::Server: drawServer(*ask, answered, done); break;
 		case Kind::Unmark: drawUnmark(*ask, answered, done); break;
 		}
 
 		ImVec2 position = ImGui::GetWindowPos(), size = ImGui::GetWindowSize();
 		Overlay::ClaimMouse(position.x, position.y, position.x + size.x, position.y + size.y);
+		// a drop-down's list reaches past the window
+		for (const ImGuiPopupData& popup : GImGui->OpenPopupStack) {
+			const ImGuiWindow* list = popup.Window;
+			if (list) Overlay::ClaimMouse(list->Pos.x, list->Pos.y, list->Pos.x + list->Size.x, list->Pos.y + list->Size.y);
+		}
 		ImGui::End();
 		if (done) answer(answered);
 	}

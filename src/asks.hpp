@@ -19,6 +19,8 @@ namespace Asks {
 		Changed,
 		// an overlay setting it asks to turn on
 		Setting,
+		// it may see the game server and asks the player to pick one
+		Server,
 		// a change of its that unmarks more than one point: Allow unmarks,
 		// DontAllow keeps them marked, NotNow cancels the whole change
 		Unmark
@@ -65,7 +67,9 @@ namespace Asks {
 	std::string settingState(const Extensions::Extension& ext, const std::string& name);
 
 	// Nothing is queued for what it has, what was refused this start, Never
-	// ask again, or what's switched off on its Permissions tab.
+	// ask again, or what's switched off on its Permissions tab. Game server
+	// when it has it and none is picked asks the player to pick one, until
+	// Not now for this start.
 	void askPermission(Extensions::Extension& ext, Extensions::ExtensionPermissionTypes permission);
 	void askKeys(Extensions::Extension& ext, const std::string& key);
 	void askChanged(Extensions::Extension& ext);

@@ -1,5 +1,6 @@
 #include "settings.hpp"
 #include "files.hpp"
+#include "game_server.hpp"
 #include "helpers.hpp"
 #include <algorithm>
 #include <iostream>
@@ -25,6 +26,7 @@ namespace Settings {
     int size = 125;
     const std::vector<int> Sizes = { 80, 90, 100, 110, 125, 150 };
     bool readGameTraffic = false;
+    std::string gameServer;
     bool usageInList = true;
     bool checkUpdates = true;
     bool keepInTray = true;
@@ -111,6 +113,10 @@ namespace Settings {
             if (std::find(Sizes.begin(), Sizes.end(), saved) != Sizes.end()) size = saved;
         }
         readGameTraffic = settings.value("readGameTraffic", false);
+        // anything but a key this overlay knows, hand edited, is not picked
+        auto savedServer = settings.find("gameServer");
+        gameServer = savedServer != settings.end() && savedServer->is_string() ? savedServer->get<std::string>() : "";
+        if (!GameServer::find(gameServer)) gameServer.clear();
         usageInList = settings.value("usageInList", true);
         checkUpdates = settings.value("checkUpdates", true);
         keepInTray = settings.value("keepInTray", true);
@@ -139,6 +145,7 @@ namespace Settings {
         settings["lightDark"] = lightDark;
         settings["size"] = size;
         settings["readGameTraffic"] = readGameTraffic;
+        settings["gameServer"] = gameServer;
         settings["usageInList"] = usageInList;
         settings["checkUpdates"] = checkUpdates;
         settings["keepInTray"] = keepInTray;
