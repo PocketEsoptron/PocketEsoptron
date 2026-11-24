@@ -176,10 +176,17 @@ namespace ItemFiles {
     // GatherExcelConfigData or MaterialExcelConfigData) cut to what its game/
     // file keeps, by that file's name. Empty when the table doesn't read.
     extern std::string trimGameTable(const std::string& name, const std::string& table);
+    // The trimmed materials with the English name of each item a gather point
+    // gives, from the whole MaterialExcelConfigData (nameTextMapHash) and
+    // AnimeGameData's text maps (TextMapEN and TextMap_MediumEN, the names are
+    // split between them). As it was when a table doesn't read.
+    extern std::string nameGatherItems(const std::string& trimmed, const std::string& materials,
+        const std::string& gathers, const std::vector<std::string>& textMaps);
 
     // --make-items <folder> [--allow-drop]: downloads everything into
     // folder/items, checks it, then writes the pack and items.json to
-    // folder/out, and folder/game-kept.txt when a game table didn't download.
+    // folder/out, and folder/game-kept.txt when a game table or the text maps
+    // naming its items didn't download.
     // 1 when it fails or its check does, or when the published
     // items.json can't be read to compare with, 3 when the published pack is
     // the same. --allow-drop also leaves out points HoYoLAB sends without a

@@ -128,6 +128,10 @@ namespace Links {
     extern int ChestByName(std::string_view name);
     // ChestByName of every Chest gadget in the tables that gives a type
     extern Known ChestsByName(const GameTables::Tables& tables);
+    // Each gather gadget whose item grows back, linked to the one type of the
+    // regrows groups named like the item (case, spaces and a plural s aside):
+    // Sumeru Rose to Sumeru Rose. Not for a gadget that gives more than one item.
+    extern Known GathersByName(const GameTables::Tables& tables, const ItemCatalog::Catalog& catalog);
     // [{gadget, type}] and back, false when it doesn't read
     extern std::string KnownToJson(const Known& known);
     extern bool KnownFromJson(const std::string& text, Known& out);

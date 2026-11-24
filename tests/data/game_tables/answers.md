@@ -19,3 +19,7 @@ Whole rows of the game's 7.2 tables (animegamedata2, ExcelBinOutput, CNRELWin7.2
 When they grow back (fandom wiki, Reset page): Apple and Iron Chunk at the next 0:00 on the
 server's clock, Crystal Chunk 72 h after the pickup, Quenepa Berry 48 h after it, Magical Crystal
 when the mining outcrops move at 6:00 on the server's clock; the Hydroculus never.
+
+- TextMapEN.json, TextMap_MediumEN.json (animegamedata2 main, TextMap, 2026-11-24): the first two entries of
+  each, and the names of the six materials above, all in the Medium map: Apple, Iron Chunk,
+  Crystal Chunk, Quenepa Berry, Hydroculus, Magical Crystal Chunk.

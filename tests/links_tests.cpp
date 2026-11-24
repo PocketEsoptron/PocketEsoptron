@@ -4,6 +4,8 @@
 #include <unordered_set>
 #include <vector>
 #include <catch2/catch_test_macros.hpp>
+#include "game_tables.hpp"
+#include "item_catalog.hpp"
 #include "installed_pack.hpp"
 #include "marker_index.hpp"
 #include "packets/learner.hpp"
@@ -245,4 +247,18 @@ TEST_CASE("The recordings link each gadget to its map item type", "[links]") {
     Links::Known shipped = right;
     shipped.insert(byHand.begin(), byHand.end());
     CHECK(Links::Shipped() == shipped);
+}
+
+TEST_CASE("Every gather gadget that grows back gets its type by its item's name, the shipped ones agree", "[links]") {
+    auto catalog = installedPack();
+    if (!catalog || !catalog->game.knowsRanks())
+        SKIP("no items pack with the game's ranks and names on this PC");
+    Links::Known byName = Links::GathersByName(catalog->game, *catalog);
+    Links::Types types = Links::TypesOf(*catalog);
+    for (auto& [gadget, type] : Links::Shipped()) {
+        if (!types.regrows.count(type)) continue;
+        INFO("gadget " << gadget);
+        CHECK(byName.count(gadget));
+        if (byName.count(gadget)) CHECK(byName.at(gadget) == type);
+    }
 }

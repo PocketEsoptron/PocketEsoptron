@@ -10,7 +10,8 @@
 //
 //   game/gadgets.json            [{id, type, jsonName}], from GadgetExcelConfigData
 //   game/gathers.json            [{gadgetId, itemId, pointType, refreshId}], from GatherExcelConfigData
-//   game/materials.json          [{id, itemType, materialType, rank}], from MaterialExcelConfigData
+//   game/materials.json          [{id, itemType, materialType, rank, name}], from MaterialExcelConfigData,
+//                                name (English) only for the items a gather point gives
 //   game/learned-messages.json   Learner::ToJson of the shipped ids
 //   game/scenes.json             [{map, xx, xz, x0, yx, yz, y0}], Scene::Formula
 //   game/links.json              [{gadget, type}], Links::KnownToJson of the shipped links
@@ -43,6 +44,8 @@ namespace GameTables {
 		std::string_view itemType, materialType;
 		// the game sorts items by it, one per kind: 311 and up a local specialty, 321 a cooking ingredient
 		uint32_t rank = 0;
+		// English, "Sumeru Rose"; empty when the pack has none
+		std::string_view name;
 	};
 
 	class Tables {
@@ -53,6 +56,8 @@ namespace GameTables {
 		bool material(uint32_t id, Material& out) const;
 		// the gather points that use this gadget
 		std::vector<Gather> gathers(uint32_t gadget) const;
+		// every gather point, by gadget
+		const std::vector<Gather>& allGathers() const { return m_gathers; }
 		size_t gadgetCount() const { return m_gadgets.size(); }
 		size_t gatherCount() const { return m_gathers.size(); }
 		size_t materialCount() const { return m_materials.size(); }
@@ -79,6 +84,7 @@ namespace GameTables {
 			uint32_t id = 0;
 			uint16_t itemType = 0, materialType = 0;
 			uint32_t rank = 0;
+			uint16_t name = 0;
 		};
 		std::vector<GadgetRow> m_gadgets;      // by id
 		std::vector<Gather> m_gathers;         // by gadget

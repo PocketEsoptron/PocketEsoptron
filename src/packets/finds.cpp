@@ -244,6 +244,9 @@ namespace Finds {
         if (catalog)
             for (auto& [gadget, type] : Links::ChestsByName(catalog->game))
                 known.insert({ gadget, type });
+        if (catalog)
+            for (auto& [gadget, type] : Links::GathersByName(catalog->game, *catalog))
+                known.insert({ gadget, type });
         return known;
     }
 

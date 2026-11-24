@@ -1,5 +1,6 @@
 #include "links.hpp"
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <cstdlib>
 #include <limits>
@@ -368,6 +369,51 @@ namespace Links {
         for (const GameTables::Gadget& g : tables.gadgetsOfType("Chest"))
             if (int type = ChestByName(g.name))
                 out[g.id] = type;
+        return out;
+    }
+
+    // lower case, every run of spaces (also no-break ones) one space, no plural s
+    static std::string nameKey(std::string_view name) {
+        std::string out;
+        for (size_t i = 0; i < name.size(); i++) {
+            unsigned char c = (unsigned char)name[i];
+            bool space = c == ' ' || (c == 0xC2 && i + 1 < name.size() && (unsigned char)name[i + 1] == 0xA0);
+            if (space) {
+                if (c == 0xC2) i++;
+                if (!out.empty() && out.back() != ' ') out += ' ';
+                continue;
+            }
+            out += (char)std::tolower(c);
+        }
+        while (!out.empty() && out.back() == ' ') out.pop_back();
+        if (out.size() > 1 && out.back() == 's') out.pop_back();
+        return out;
+    }
+
+    Known GathersByName(const GameTables::Tables& tables, const ItemCatalog::Catalog& catalog) {
+        Types types = TypesOf(catalog);
+        // name -> type, 0 when two types have it
+        std::map<std::string, int> typeNamed;
+        for (const ItemCatalog::TypeGroup& group : catalog.groups)
+            for (const ItemCatalog::Type& type : group.types)
+                if (types.regrows.count(type.id)) {
+                    auto [at, added] = typeNamed.emplace(nameKey(type.name), type.id);
+                    if (!added && at->second != type.id) at->second = 0;
+                }
+        Known out;
+        std::map<uint32_t, uint32_t> itemOf;
+        for (const GameTables::Gather& gather : tables.allGathers()) {
+            auto [at, added] = itemOf.emplace(gather.gadget, gather.item);
+            if (!added && at->second != gather.item) at->second = 0;
+        }
+        for (auto& [gadget, item] : itemOf) {
+            GameTables::Material material;
+            if (!item || !tables.material(item, material) || material.name.empty() || !Regrow::Of(item, tables).grows())
+                continue;
+            auto type = typeNamed.find(nameKey(material.name));
+            if (type != typeNamed.end() && type->second)
+                out[gadget] = type->second;
+        }
         return out;
     }
 

@@ -82,6 +82,7 @@ namespace GameTables {
 				m.itemType = word(text(row, "itemType"));
 				m.materialType = word(text(row, "materialType"));
 				m_knowsRanks |= id(row, "rank", m.rank);
+				m.name = word(text(row, "name"));
 				m_materials.push_back(m);
 			}
 			std::sort(m_materials.begin(), m_materials.end(), [](const MaterialRow& a, const MaterialRow& b) { return a.id < b.id; });
@@ -114,6 +115,7 @@ namespace GameTables {
 		out.itemType = wordAt(found->itemType);
 		out.materialType = wordAt(found->materialType);
 		out.rank = found->rank;
+		out.name = wordAt(found->name);
 		return true;
 	}
 

@@ -70,6 +70,22 @@ TEST_CASE("The game's tables are cut to the fields game/ keeps", "[game_tables]"
     CHECK(ItemFiles::trimGameTable("game/other.json", table("GadgetExcelConfigData.json")).empty());
 }
 
+TEST_CASE("The items gather points give get their names from the text maps, the rest none", "[game_tables]") {
+    std::string materials = table("MaterialExcelConfigData.json");
+    std::string trimmed = ItemFiles::trimGameTable(GameTables::MATERIALS, materials);
+    std::vector<std::string> maps = { table("TextMapEN.json"), table("TextMap_MediumEN.json") };
+    nlohmann::json named = nlohmann::json::parse(ItemFiles::nameGatherItems(trimmed, materials, table("GatherExcelConfigData.json"), maps));
+    REQUIRE(named.size() == 6);
+    const char* names[] = { "Apple", "Iron Chunk", "Crystal Chunk", "Quenepa Berry", "Hydroculus" };
+    for (size_t i = 0; i < 5; i++)
+        CHECK(named[i].value("name", "") == names[i]);
+    // the Magical Crystal Chunk comes from the outcrops, no gather point gives it
+    CHECK(!named[5].contains("name"));
+    CHECK(named[5]["rank"] == 301);
+    // a text map that doesn't read leaves the table as it was
+    CHECK(ItemFiles::nameGatherItems(trimmed, materials, table("GatherExcelConfigData.json"), { "not json" }) == trimmed);
+}
+
 TEST_CASE("A pack with game/ gives the tables, the ids and the formulas", "[game_tables]") {
     auto catalog = cutPack(true);
     CHECK(catalog->pointCount() == 74);

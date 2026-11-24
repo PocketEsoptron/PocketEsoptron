@@ -94,7 +94,7 @@ namespace Finds {
     };
 
     // the items pack's links (game/links.json), then the ones the build ships, then
-    // the chests by their names in the pack's tables
+    // the chests by their names in the pack's tables, then the gathers by their items' names
     extern Links::Known KnownLinks(const ItemCatalog::Catalog* catalog);
     // the map item types found by themselves: the ones the links' gadgets are,
     // the puzzle chests a chest can sit on, and the puzzles
