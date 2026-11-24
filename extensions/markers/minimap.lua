@@ -47,6 +47,8 @@ function minimap.draw(player)
                             DrawBadge(player.centerX + dx, player.centerY + dy, shown, catalog.icon(point.type), look)
                             if not done and finds.maybe[point.id] then
                                 map.drawBubble(player.centerX + dx, player.centerY + dy, shown, "?")
+                            elseif done and finds.backAt(point.id) then
+                                map.drawBubble(player.centerX + dx, player.centerY + dy, shown, "", map.CLOCK)
                             end
                         end
                     end

@@ -27,6 +27,7 @@ namespace {
                     return { types = types, typeOf = {}, regionAt = function() return nil end, on = function() return nil end }
                 end
                 package.preload.collected = function() return { has = function() return false end } end
+                package.preload.finds = function() return { backAt = function() end } end
                 FileExists = function() return false end
                 WriteFile = function() end
                 JSON_Encode = function() return "" end

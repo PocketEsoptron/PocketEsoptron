@@ -212,7 +212,8 @@ namespace LuaFunctions {
     // DrawBadge(x, y, radius, icon, { ring = color, faded = true }): a round
     // badge like the game's map icons, the icon a texture of its own or 0
     void DrawBadge(float x, float y, float radius, sol::optional<GLuint> icon, sol::optional<sol::table> options);
-    // DrawBubble(x, y, radius, text, { color }): a small bubble with a count or a sign
+    // DrawBubble(x, y, radius, text, { color, sign = "clock" }): a small bubble with
+    // a count or a sign, or a clock in it for something that comes back later
     void DrawBubble(float x, float y, float radius, const std::string& text, sol::optional<sol::table> options);
     std::tuple<bool, bool> ClickArea(float x0, float y0, float x1, float y1);
     void PushClipRect(float x0, float y0, float x1, float y1);

@@ -37,6 +37,8 @@ finds.auto = true
 finds.maybe = {}
 -- goes up when maybe changes
 finds.version = 0
+-- goes up when a back time changes
+finds.backVersion = 0
 
 local function ids(list)
     local out = {}
@@ -90,6 +92,7 @@ local function tickUntil(list, at, from)
         for _, id in ipairs(list) do
             if not back[id] or back[id] < at then back[id] = at end
         end
+        finds.backVersion = finds.backVersion + 1
         for _, object in ipairs(from or {}) do
             local o = objects[object] or { at = at, points = {} }
             if o.at < at then o.at = at end
@@ -210,6 +213,7 @@ local function grewBack(object)
             off[#off + 1] = id
         end
     end
+    finds.backVersion = finds.backVersion + 1
     for i = #waiting, 1, -1 do
         if waiting[i].object == object and waiting[i].back then table.remove(waiting, i) end
     end
@@ -307,6 +311,7 @@ local function grown(now)
     if #off == 0 then return false end
     table.sort(off)
     for _, id in ipairs(off) do back[id] = nil end
+    finds.backVersion = finds.backVersion + 1
     collected.change({}, off, "auto")
     return true
 end
@@ -365,6 +370,7 @@ collected.listen(function(id, on, from)
     -- a tick taken off by hand or by a site doesn't come back off later
     if not on and from ~= "auto" and back[id] then
         back[id] = nil
+        finds.backVersion = finds.backVersion + 1
         for object, o in pairs(objects) do
             for i = #o.points, 1, -1 do
                 if o.points[i] == id then table.remove(o.points, i) end

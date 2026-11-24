@@ -2621,14 +2621,19 @@ namespace LuaFunctions {
 	{
 		if (!inFrame("DrawBubble")) return;
 		std::optional<unsigned int> fill;
+		std::string sign;
 		if (options) {
 			sol::optional<uint32_t> color = (*options)["color"];
 			if (color) fill = *color;
+			sign = options->get_or<std::string>("sign", "");
 		}
+		if (sign == "clock") {
+			Controls::ClockBubble(ImGui::GetBackgroundDrawList(), ImVec2(x, y), radius, fill);
+			return;
+		}
+		if (!sign.empty()) Extensions::logOnce("DrawBubble", "sign is clock or nothing");
 		// a count or a sign, not a sentence
-		std::string shown = text.substr(0, 8);
-		// never half a UTF-8 character
-		while (!shown.empty() && shown.size() < text.size() && (text[shown.size()] & 0xC0) == 0x80) shown.pop_back();
+		std::string shown = cutText(text, 8);
 		Controls::Bubble(ImGui::GetBackgroundDrawList(), ImVec2(x, y), radius, shown.c_str(), fill);
 	}
 
