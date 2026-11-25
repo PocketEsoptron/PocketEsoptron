@@ -2893,6 +2893,7 @@ namespace LuaFunctions {
 		case Finds::How::Opened: return "opened";
 		case Finds::How::PickedUp: return "picked_up";
 		case Finds::How::Back: return "back";
+		case Finds::How::Used: return "used";
 		default: return "solved";
 		}
 	}

@@ -29,6 +29,8 @@ namespace Links {
             return Route::None;
         if (g.type == "Chest")
             return Route::Opened;
+        if (g.type == "ViewPoint")
+            return Route::Used;
         std::vector<GameTables::Gather> gathers = tables.gathers(gadget);
         if (!gathers.empty()) {
             if (!tables.knowsRanks())
@@ -52,6 +54,7 @@ namespace Links {
         case Route::Opened: return opened;
         case Route::PickedUp: return pickedUp;
         case Route::Regrows: return regrows;
+        case Route::Used: return used;
         default: return none;
         }
     }
@@ -74,6 +77,8 @@ namespace Links {
                     out.regrows.insert(type.id);
                 if (group.id == CHESTS)
                     out.chests.insert(type.id);
+                if (type.id == VIEWPOINT)
+                    out.used.insert(type.id);
             }
         out.puzzleChests = { BURIED_CHEST, SEALED_CHEST, LIGHT_REVEALED_CHEST };
         out.opened.insert(out.puzzleChests.begin(), out.puzzleChests.end());
@@ -177,7 +182,8 @@ namespace Links {
         if (m_never.count(object.gadget) || (known != m_votes.end() && known->second.objects.count({ object.group, object.config })))
             return;
         Route route = RouteOf(object.gadget, tables);
-        if (route == Route::None)
+        // a viewpoint's type comes from the tables (Viewpoints)
+        if (route == Route::None || route == Route::Used)
             return;
         // an object whose floor isn't known tells nothing, the map item near may be on another floor
         Floors::Of floor = Floors::At(object.group, index, types.of(route), map, at.x, at.y, std::max(2 * RADIUS, RADIUS + MARGIN));
@@ -378,6 +384,15 @@ namespace Links {
         return out;
     }
 
+    Known Viewpoints(const ItemCatalog::Catalog& catalog) {
+        Known out;
+        if (!TypesOf(catalog).used.count(VIEWPOINT))
+            return out;
+        for (const GameTables::Gadget& g : catalog.game.gadgetsOfType("ViewPoint"))
+            out[g.id] = VIEWPOINT;
+        return out;
+    }
+
     // lower case, every run of spaces (also no-break ones) one space, no plural s
     static std::string nameKey(std::string_view name) {
         std::string out;
@@ -458,6 +473,7 @@ namespace Links {
             { 70540028, 78 }, { 70540034, 402 }, { 70540036, 386 },                   // Starconch, Rukkhashava Mushrooms, Harra Fruit
             { 70540042, 384 }, { 70540043, 400 }, { 70540051, 522 },                  // Sumeru Rose, Nilotpala Lotus, Pluie Lotus
             { 70540053, 492 }, { 70540061, 545 }, { 70540081, 620 },                  // Marcotte, Lumitoile, Embercore Flower
+            { 70540055, 501 },                                                        // Romaritime Flower
             { 73176001, 854 },                                                        // Lumifluorite
         };
     }

@@ -32,14 +32,15 @@ namespace World {
         uint64_t ms = 0;
     };
 
-    enum class What { Appeared, StateChanged, Opened, Left, GotItem, PlayerMoved, SceneChanged };
+    enum class What { Appeared, StateChanged, Opened, Left, GotItem, PlayerMoved, SceneChanged, Interacted };
 
     struct Event {
         What what = What::Appeared;
         uint64_t ms = 0;
         // came from a message that waited for its kind to be learned
         bool replayed = false;
-        // Appeared, StateChanged (with the new state), Opened, Left
+        // Appeared, StateChanged (with the new state), Opened, Left, Interacted (the
+        // player interacted with it)
         Object object;
         // Opened: false when the world never saw it, then only group and config are set
         bool known = true;

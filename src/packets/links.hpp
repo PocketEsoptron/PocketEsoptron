@@ -21,28 +21,31 @@ namespace ItemCatalog { class Catalog; }
 
 namespace Links {
     // how an object of a gadget is found
-    enum class Route { None, Opened, PickedUp, Regrows };
+    enum class Route { None, Opened, PickedUp, Regrows, Used };
 
     // by the game's tables: a Chest is opened, a gather point is picked up, and
-    // Regrows when its item grows back (Regrow). None for the rest, and for a
-    // gather point when the tables have no ranks to tell what grows back
+    // Regrows when its item grows back (Regrow). A ViewPoint is used: the game
+    // takes it away once the player has looked, and never sends one done
+    // before. None for the rest, and for a gather point when the tables have no
+    // ranks to tell what grows back
     extern Route RouteOf(uint32_t gadget, const GameTables::Tables& tables);
 
     // the map item types each route can mark, and every type an object can sit on
     struct Types {
-        std::unordered_set<int> opened, pickedUp, regrows, places;
+        std::unordered_set<int> opened, pickedUp, regrows, used, places;
         // the Chests group's types, and the Buried, Sealed and Light-Revealed chests
         std::unordered_set<int> chests, puzzleChests;
         const std::unordered_set<int>& of(Route route) const;
     };
     // opened: Chests, Special Items, the mora chests, Geo Sigil and the puzzle
     // chests; picked up: Special Items; regrows: Local Specialties, Ores and
-    // Inventory / Materials; places: the Chests, Special Items, Experience and
-    // Puzzle Chest groups
+    // Inventory / Materials; used: the Viewpoint when the pack has it; places:
+    // the Chests, Special Items, Experience and Puzzle Chest groups
     extern Types TypesOf(const ItemCatalog::Catalog& catalog);
 
-    // HoYoLAB's types of the chests a puzzle hides, and the Geo Sigil
+    // HoYoLAB's types of the chests a puzzle hides, the Geo Sigil and the Viewpoint
     inline constexpr int BURIED_CHEST = 69, SEALED_CHEST = 75, LIGHT_REVEALED_CHEST = 879, GEO_SIGIL = 128;
+    inline constexpr int VIEWPOINT = 85;
 
     // the map an object is on by its group, 0 when it isn't one the overlay knows
     extern int MapOf(uint32_t group);
@@ -129,6 +132,9 @@ namespace Links {
     extern int ChestByName(std::string_view name);
     // ChestByName of every Chest gadget in the tables that gives a type
     extern Known ChestsByName(const GameTables::Tables& tables);
+    // every ViewPoint gadget in the pack's tables, linked to the Viewpoint; none
+    // when the pack has no Viewpoint
+    extern Known Viewpoints(const ItemCatalog::Catalog& catalog);
     // Each gather gadget whose item grows back, linked to the one type of the
     // regrows groups named like the item (case, spaces and a plural s aside):
     // Sumeru Rose to Sumeru Rose. Not for a gadget that gives more than one item.

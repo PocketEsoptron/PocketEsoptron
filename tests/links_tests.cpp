@@ -215,6 +215,7 @@ TEST_CASE("The recordings link each gadget to its map item type", "[links]") {
         { 70540028, 78 }, { 70540034, 402 }, { 70540036, 386 },                   // Starconch, Rukkhashava Mushrooms, Harra Fruit
         { 70540042, 384 }, { 70540043, 400 }, { 70540051, 522 },                  // Sumeru Rose, Nilotpala Lotus, Pluie Lotus
         { 70540053, 492 }, { 70540061, 545 }, { 70540081, 620 },                  // Marcotte, Lumitoile, Embercore Flower
+        { 70540055, 501 },                                                        // Romaritime Flower
         { 73176001, 854 },                                                        // Lumifluorite
     };
     // shipped without being learned here, by what the game's names say they are

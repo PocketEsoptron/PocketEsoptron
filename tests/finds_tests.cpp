@@ -48,7 +48,7 @@ namespace {
     };
 
     // every find of the messages played from their start
-    Played play(const std::filesystem::path& messages, std::shared_ptr<const ItemCatalog::Catalog> catalog,
+    Played play(const std::vector<Messages::Message>& messages, std::shared_ptr<const ItemCatalog::Catalog> catalog,
         const Learner::Known& known, std::unordered_set<int32_t> done = {}, const GameServer::Server* server = nullptr,
         std::vector<Finds::Growing> growing = {}) {
         Learner::Learner learner(known);
@@ -61,7 +61,7 @@ namespace {
         Played played;
         std::vector<Learner::Event> in;
         std::vector<World::Event> events;
-        for (const Messages::Message& m : RecordedMessages::read(messages)) {
+        for (const Messages::Message& m : messages) {
             learner.Feed(m, in);
             for (const Learner::Event& e : in)
                 world.Feed(e, events);
@@ -74,6 +74,12 @@ namespace {
         }
         finder.Finish(world, played.found);
         return played;
+    }
+
+    Played play(const std::filesystem::path& messages, std::shared_ptr<const ItemCatalog::Catalog> catalog,
+        const Learner::Known& known, std::unordered_set<int32_t> done = {}, const GameServer::Server* server = nullptr,
+        std::vector<Finds::Growing> growing = {}) {
+        return play(RecordedMessages::read(messages), catalog, known, std::move(done), server, std::move(growing));
     }
 
     std::vector<int32_t> points(const std::vector<Finds::Found>& found) {
@@ -150,7 +156,11 @@ TEST_CASE("The finds on every recording", "[finds]") {
     // On g-s4-live the player mined an Iron Chunk and a Crystal Chunk rock in the Wenut Tunnels (the
     // Iron Chunk grows back by the server's clock, not found without one; the Crystal Chunk's floor
     // isn't known without the minimap, so 0), then three Condessence rocks in Fontaine under three map
-    // items: their rows say Crystal Chunk, the drops gave Condessence Crystal, each 0 alone
+    // items: their rows say Crystal Chunk, the drops gave Condessence Crystal, each 0 alone. On
+    // g-s4-unmark the player mined two Condessence rocks under two map items (0 each, both ticked), then
+    // looked from the Fontaine viewpoint 56253, ticked on the map by hand. On g-s5-live the player opened
+    // a Wooden Mora Chest floating on the water, its map item 56167 on HoYoLAB's underwater floor (0, the
+    // floor isn't known without the minimap; ticked by hand), then looked from the viewpoint 56252
     const std::map<std::string, std::vector<int32_t>> right = {
         { "2026-10-14_21-47", { 4831, 4620 } },
         { "2026-10-17_18-39", { 1305 } },
@@ -170,6 +180,8 @@ TEST_CASE("The finds on every recording", "[finds]") {
         { "2026-11-24_g-s2-live", { 86295, 85997, 86071, 0, 0, 64852, 64813, 100836 } },
         { "2026-11-24_g-s3-live", { 101668, 5225, 1225, 664, 0, 0, 679, 0, 0 } },
         { "2026-11-25_g-s4-live", { 0, 0, 0, 0 } },
+        { "2026-11-25_g-s4-unmark", { 0, 0, 56253 } },
+        { "2026-11-25_g-s5-live", { 0, 56252 } },
     };
     for (const std::filesystem::path& recording : recordings) {
         auto it = right.find(recording.filename().string());
@@ -201,6 +213,50 @@ TEST_CASE("A rock whose row says Crystal Chunk is found by what its drop gave, C
     // the Wenut Tunnels one is a plain Crystal Chunk
     CHECK(found[0].gadget == 70520003);
     CHECK(found[0].type == 16);
+}
+
+TEST_CASE("A viewpoint looked from is found as it goes, its map item the Viewpoint the player ticked", "[finds]") {
+    std::filesystem::path folder;
+    for (const std::filesystem::path& recording : RecordedMessages::recordings())
+        if (recording.filename() == "2026-11-25_g-s4-unmark") folder = recording;
+    auto catalog = installedPack();
+    if (folder.empty() || !catalog || !catalog->game.gadgetCount())
+        SKIP("no 2026-11-25_g-s4-unmark recording or no items pack with the game's tables on this PC");
+    std::vector<Finds::Found> found = play(folder / "messages.bin", catalog, Learner::Shipped()).found;
+    REQUIRE(found.size() == 3);
+    // the game's ViewCodex row 70500008 is this object, in Fontaine
+    const Finds::Found& viewpoint = found[2];
+    CHECK(viewpoint.how == Finds::How::Used);
+    CHECK(viewpoint.gadget == 70800028);
+    CHECK(viewpoint.group == 133402856);
+    CHECK(viewpoint.config == 856001);
+    CHECK(viewpoint.type == Links::VIEWPOINT);
+    CHECK(viewpoint.point == 56253);
+    CHECK(viewpoint.candidates.empty());
+    CHECK(viewpoint.backAt == 0);
+    // done before, it's passed over
+    CHECK(points(play(folder / "messages.bin", catalog, Learner::Shipped(), { 56253 }).found) == std::vector<int32_t>{ 0, 0 });
+    // gone with reason 2 without the player's interact, it isn't found
+    std::vector<Messages::Message> messages = RecordedMessages::read(folder / "messages.bin");
+    messages.erase(std::remove_if(messages.begin(), messages.end(),
+        [](const Messages::Message& m) { return m.id == 1891 && m.direction == Frames::Direction::Sent; }), messages.end());
+    CHECK(points(play(messages, catalog, Learner::Shipped()).found) == std::vector<int32_t>{ 0, 0 });
+}
+
+TEST_CASE("Every ViewPoint gadget of the game's tables is used and linked to the Viewpoint", "[finds]") {
+    auto catalog = installedPack();
+    if (!catalog || !catalog->game.gadgetCount())
+        SKIP("no items pack with the game's tables on this PC");
+    Links::Known viewpoints = Links::Viewpoints(*catalog);
+    // all 233 viewpoints of 7.2 use this one
+    CHECK(viewpoints.count(70800028));
+    for (auto& [gadget, type] : viewpoints)
+        CHECK(type == Links::VIEWPOINT);
+    CHECK(Links::RouteOf(70800028, catalog->game) == Links::Route::Used);
+    // named like it, but a plain Gadget
+    CHECK(Links::RouteOf(70800029, catalog->game) == Links::Route::None);
+    CHECK(Finds::KnownLinks(catalog.get()).at(70800028) == Links::VIEWPOINT);
+    CHECK(Links::TypesOf(*catalog).used == std::unordered_set<int>{ Links::VIEWPOINT });
 }
 
 TEST_CASE("Pickups that grow back sit further than RADIUS from their map item, within PICKUP_RADIUS", "[finds]") {
@@ -419,8 +475,8 @@ TEST_CASE("The types found by themselves are the links' types, the puzzle chests
     Settings::readGameTraffic = true;
     std::set<int> now = Finds::AutoTypesNow();
     CHECK(Finds::AutoTypesVersion() != off);
-    // the shipped ones are in, Dendro Rocks and what grows back aren't
-    for (int type : { 17, 44, 45, 269, 129, 359, 838, 356, 128, 5, 6, 194, 403, 508, 626, 694, 833, 141, 472 }) {
+    // the shipped ones and the Viewpoint are in, Dendro Rocks and what grows back aren't
+    for (int type : { 17, 44, 45, 269, 129, 359, 838, 356, 128, 5, 6, 194, 403, 508, 626, 694, 833, 141, 472, 85 }) {
         INFO(type);
         CHECK(now.count(type));
     }

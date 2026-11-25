@@ -21,14 +21,16 @@ namespace MarkerIndex { class Index; }
 
 // The map items the player has just done, from what the World tells: a chest
 // opened, a pickup taken (gone with reason 2 with its item got in the same
-// moment) and a puzzle solved. Only objects the World saw appear count, so
-// nothing from before the overlay listened. A pickup that grows back (Regrow)
-// says when, and can be found again from then, or sooner when its object is
-// seen again: the game never sends a picked object before it's back.
+// moment), a viewpoint used (gone with reason 2 right after the player
+// interacted with it) and a puzzle solved. Only objects the World saw appear
+// count, so nothing from before the overlay listened. A pickup that grows back
+// (Regrow) says when, and can be found again from then, or sooner when its
+// object is seen again: the game never sends a picked object before it's back.
 
 namespace Finds {
-    // Back: an object waiting to grow back was seen again, it's back already
-    enum class How { Opened, PickedUp, Solved, Back };
+    // Back: an object waiting to grow back was seen again, it's back already;
+    // Used: a viewpoint looked from
+    enum class How { Opened, PickedUp, Solved, Back, Used };
 
     struct Found {
         How how = How::Opened;
@@ -77,6 +79,8 @@ namespace Finds {
     inline constexpr double PUZZLE_RADIUS = 12;
     // the minimap's floor is wanted this long after an object whose floor isn't known came by
     inline constexpr uint64_t FLOOR_WANTED = 60 * 1000;
+    // a viewpoint goes this soon after the player interacted with it
+    inline constexpr uint64_t USED_AFTER = 2000;
 
     class Finder {
     public:
@@ -173,6 +177,8 @@ namespace Finds {
         int m_playerMap = 0;
         Floors::Of m_playerFloor;
         uint64_t m_floorWanted = 0;
+        // the object the player last interacted with, and when
+        uint64_t m_interacted = 0, m_interactedMs = 0;
     };
 
     // What every extension gave as done (SetDone) goes to the running Finder:
@@ -182,7 +188,8 @@ namespace Finds {
     extern void ForgetDone(const void* owner);
 
     // the items pack's links (game/links.json), then the ones the build ships, then
-    // the chests by their names in the pack's tables, then the gathers by their items' names
+    // the chests by their names in the pack's tables, the viewpoints, then the
+    // gathers by their items' names
     extern Links::Known KnownLinks(const ItemCatalog::Catalog* catalog);
     // the map item types found by themselves: the ones the links' gadgets are,
     // the puzzle chests a chest can sit on, and the puzzles

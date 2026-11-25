@@ -140,9 +140,10 @@ namespace LuaFunctions {
     // x, y, object } and point, or when it can't tell which: maybe, the ones it
     // can be, nearest first, rivals, the objects about as near whose map item
     // it may be instead, and maybe_none = true when it may be none of them, as
-    // its floor isn't known. how is opened, picked_up, solved or back. object
-    // is the game's object as "group/config", "" for a puzzle. A pickup also has
-    // item, the game's item got, and back_at when it grows back (Unix seconds);
+    // its floor isn't known. how is opened, picked_up, solved, used (a
+    // viewpoint looked from) or back. object is the game's object as
+    // "group/config", "" for a puzzle. A pickup also has item, the game's item
+    // got, and back_at when it grows back (Unix seconds);
     // one that grows back by the server's clock isn't found while no server is
     // picked, and is left out for an extension without Game server, as its time
     // would tell the server. A back find is an object waiting to grow back seen

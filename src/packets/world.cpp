@@ -217,6 +217,13 @@ namespace World {
             leave(in.entity, in.ms);
             break;
         }
+        case Kind::Interact:
+            if (const Object* o = Find(in.entity)) {
+                ev.what = What::Interacted;
+                ev.object = *o;
+                out.push_back(ev);
+            }
+            break;
         case Kind::ItemGot:
             ev.what = What::GotItem;
             ev.source = in.source;

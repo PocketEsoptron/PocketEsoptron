@@ -123,6 +123,10 @@ namespace Finds {
         case World::What::GotItem:
             got(event, world, out);
             break;
+        case World::What::Interacted:
+            m_interacted = event.object.entity;
+            m_interactedMs = event.ms;
+            break;
         default:
             break;
         }
@@ -356,9 +360,16 @@ namespace Finds {
             m_drops.erase(drop);
         }
         Links::Route route = Links::RouteOf(g.object.gadget, m_catalog->game);
+        Found found;
+        // a viewpoint goes as it's used, nothing comes with it
+        if (route == Links::Route::Used) {
+            bool used = m_interacted == g.object.entity && m_interactedMs <= g.ms && g.ms - m_interactedMs <= USED_AFTER;
+            if (used && find(How::Used, g.object, g.ms, world, found))
+                out.push_back(std::move(found));
+            return;
+        }
         if (route != Links::Route::PickedUp && route != Links::Route::Regrows)
             return;
-        Found found;
         for (const Got& got : m_got)
             if (uint32_t item = sameMoment(got.ms, g.ms) ? itsItem(g, got) : 0) {
                 if (find(How::PickedUp, g.object, g.at, world, found, item))
@@ -476,6 +487,9 @@ namespace Finds {
             known.insert({ gadget, type });
         if (catalog)
             for (auto& [gadget, type] : Links::ChestsByName(catalog->game))
+                known.insert({ gadget, type });
+        if (catalog)
+            for (auto& [gadget, type] : Links::Viewpoints(*catalog))
                 known.insert({ gadget, type });
         if (catalog)
             for (auto& [gadget, type] : Links::GathersByName(catalog->game, *catalog))
@@ -814,6 +828,7 @@ namespace Finds {
         case How::Opened: return "opened";
         case How::PickedUp: return "picked up";
         case How::Back: return "back";
+        case How::Used: return "used";
         default: return "solved";
         }
     }
