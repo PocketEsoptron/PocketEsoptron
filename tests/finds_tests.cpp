@@ -159,8 +159,8 @@ TEST_CASE("The finds on every recording", "[finds]") {
     // items: their rows say Crystal Chunk, the drops gave Condessence Crystal, each 0 alone. On
     // g-s4-unmark the player mined two Condessence rocks under two map items (0 each, both ticked), then
     // looked from the Fontaine viewpoint 56253, ticked on the map by hand. On g-s5-live the player opened
-    // a Wooden Mora Chest floating on the water, its map item 56167 on HoYoLAB's underwater floor (0, the
-    // floor isn't known without the minimap; ticked by hand), then looked from the viewpoint 56252
+    // a Wooden Mora Chest floating on the water, its map item 56167 filed on HoYoLAB's underwater floor
+    // but taken as on top (ticked by hand), then looked from the viewpoint 56252
     const std::map<std::string, std::vector<int32_t>> right = {
         { "2026-10-14_21-47", { 4831, 4620 } },
         { "2026-10-17_18-39", { 1305 } },
@@ -181,7 +181,7 @@ TEST_CASE("The finds on every recording", "[finds]") {
         { "2026-11-24_g-s3-live", { 101668, 5225, 1225, 664, 0, 0, 679, 0, 0 } },
         { "2026-11-25_g-s4-live", { 0, 0, 0, 0 } },
         { "2026-11-25_g-s4-unmark", { 0, 0, 56253 } },
-        { "2026-11-25_g-s5-live", { 0, 56252 } },
+        { "2026-11-25_g-s5-live", { 56167, 56252 } },
     };
     for (const std::filesystem::path& recording : recordings) {
         auto it = right.find(recording.filename().string());

@@ -17,6 +17,10 @@ namespace ItemCatalog {
 	static std::shared_ptr<const Catalog> shared;
 	static std::atomic<uint64_t> lastVersion = 0;
 
+	// HoYoLAB's ids: the type, and the group and floor under the Great Fontaine Lake
+	static constexpr uint16_t WOODEN_MORA_CHEST = 129;
+	static constexpr uint16_t FONTAINE_LAKE_GROUP = 90, FONTAINE_LAKE_FLOOR = 78;
+
 	// an integer from min to max, false for anything else (missing, null, a string, too big)
 	template <typename T>
 	static bool integer(const json& from, const char* key, T& out, int64_t min = 0, int64_t max = std::numeric_limits<T>::max()) {
@@ -59,6 +63,11 @@ namespace ItemCatalog {
 			if (!integer(*group, "group_id", point.group)) return "point_group.group_id";
 			if (!integer(*group, "floor_id", point.floor)) return "point_group.floor_id";
 		}
+		// HoYoLAB files the Wooden Mora Chests on the Great Fontaine Lake under
+		// the water, but the game's crate (SearchPoint_OnWater) floats on top.
+		// The ones in caves keep their floor.
+		if (point.type == WOODEN_MORA_CHEST && point.group == FONTAINE_LAKE_GROUP && point.floor == FONTAINE_LAKE_FLOOR)
+			point.group = point.floor = 0;
 		// the pair is extra, a bad one costs the pair and not the point
 		if (from.contains("appsample") && !integer(from, "appsample", point.appsample, 1)) point.appsample = 0;
 		if (point.appsample && from.contains("appsample_level") && !integer(from, "appsample_level", point.appsampleLevel)) point.appsampleLevel = 0;
