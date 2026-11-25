@@ -161,8 +161,16 @@ namespace Finds {
         Scene::MapPos at;
         if (!type || !object.hasPos || !map || !Scene::ToMap(object.pos, map, at))
             return;
-        double reach = std::max(2 * PICKUP_RADIUS, PICKUP_RADIUS + Links::MARGIN);
-        if (!Floors::At(object.group, *m_index, typesFor(type), map, at.x, at.y, reach).known)
+        // the reach find looks at: the nearest map item of the types on any floor,
+        // or PICKUP_RADIUS when it's nearer
+        std::unordered_set<int> types = typesFor(type);
+        MarkerIndex::Near near = m_index->UniqueNear(types, map, at.x, at.y, FAR_RADIUS, Links::MARGIN,
+            MarkerIndex::Floor::Any());
+        if (!near.nearest)
+            return;
+        double radius = std::max(PICKUP_RADIUS, near.distance);
+        double reach = std::max(2 * radius, radius + Links::MARGIN);
+        if (!Floors::At(object.group, *m_index, types, map, at.x, at.y, reach).known)
             m_floorWanted = std::max(m_floorWanted, ms + FLOOR_WANTED);
     }
 
@@ -422,11 +430,15 @@ namespace Finds {
         if (regrow.grows() && !backAt)
             return false;
         std::unordered_set<int> types = typesFor(type);
-        double radius = how == How::PickedUp && regrow.grows() ? PICKUP_RADIUS : Links::RADIUS;
-        Floors::Of floor = floorOf(object.group, types, map, at.x, at.y,
-            std::max(2 * radius, radius + Links::MARGIN));
-        MarkerIndex::Near near = m_index->UniqueNear(types, map, at.x, at.y, radius, Links::MARGIN,
-            floor.floor, regrow.grows() ? &m_growingTaken : &m_taken);
+        // the usual radius first, then a step further out at a time while nothing is there
+        Floors::Of floor;
+        MarkerIndex::Near near;
+        for (double radius = how == How::PickedUp && regrow.grows() ? PICKUP_RADIUS : Links::RADIUS;
+             radius <= FAR_RADIUS && !near.nearest; radius += FAR_STEP) {
+            floor = floorOf(object.group, types, map, at.x, at.y, std::max(2 * radius, radius + Links::MARGIN));
+            near = m_index->UniqueNear(types, map, at.x, at.y, radius, Links::MARGIN,
+                floor.floor, regrow.grows() ? &m_growingTaken : &m_taken);
+        }
         if (!near.nearest)
             return false;
         out = Found();
@@ -877,6 +889,9 @@ namespace Finds {
         }
         worldListener = World::AddListener([](const World::Event& event) {
             std::vector<Found> found;
+            // the minimap's floor and how long it's shown, for the log, map 0 when it isn't read
+            int minimapMap = 0, minimapGroup = 0, minimapFloor = 0;
+            std::chrono::steady_clock::time_point minimapSince;
             {
                 std::lock_guard lock(mutex);
                 if (!running)
@@ -894,6 +909,10 @@ namespace Finds {
                 }
                 askFloor(r, event.ms);
                 World::Visit([&](const World::World& world) { r.finder.Feed(event, world, found); });
+                minimapMap = r.map;
+                minimapGroup = r.group;
+                minimapFloor = r.floor;
+                minimapSince = r.floorSince;
                 r.unsaved = r.links.TakeUnsaved() || r.unsaved;
                 if (r.links.TakeChanged()) {
                     std::cout << "Map item links: " << r.links.Learned().size() << " learned" << std::endl;
@@ -905,6 +924,10 @@ namespace Finds {
             }
             if (found.empty())
                 return;
+            std::string minimap = "not read";
+            if (minimapMap)
+                minimap = std::to_string(minimapMap) + " " + std::to_string(minimapGroup) + "/" + std::to_string(minimapFloor) + " for "
+                    + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - minimapSince).count()) + " s";
             for (const Found& f : found) {
                 std::cout << "Map items: " << howName(f.how) << " " << f.gadget << " at " << f.group << "/" << f.config << ", ";
                 if (f.how == How::Back) {
@@ -916,7 +939,10 @@ namespace Finds {
                     for (int32_t c : f.candidates)
                         std::cout << " " << c;
                 }
-                std::cout << " (type " << f.type << ")" << std::endl;
+                std::cout << " (type " << f.type << ")";
+                if (f.how != How::Back)
+                    std::cout << ", floor " << (f.maybeNone ? "not known" : "known") << ", minimap " << minimap;
+                std::cout << std::endl;
             }
             recordGrowing(found);
             keep(found);

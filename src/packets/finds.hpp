@@ -81,6 +81,9 @@ namespace Finds {
     inline constexpr uint64_t FLOOR_WANTED = 60 * 1000;
     // a viewpoint goes this soon after the player interacted with it
     inline constexpr uint64_t USED_AFTER = 2000;
+    // how far out a map item is looked for when none is within the usual radius,
+    // and the step it widens by
+    inline constexpr double FAR_RADIUS = 25, FAR_STEP = 0.5;
 
     class Finder {
     public:

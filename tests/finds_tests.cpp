@@ -160,20 +160,23 @@ TEST_CASE("The finds on every recording", "[finds]") {
     // g-s4-unmark the player mined two Condessence rocks under two map items (0 each, both ticked), then
     // looked from the Fontaine viewpoint 56253, ticked on the map by hand. On g-s5-live the player opened
     // a Wooden Mora Chest floating on the water, its map item 56167 filed on HoYoLAB's underwater floor
-    // but taken as on top (ticked by hand), then looked from the viewpoint 56252
+    // but taken as on top (ticked by hand), then looked from the viewpoint 56252. With no map item within
+    // the usual radius one is looked for further out, up to 25: three come out 0, each with another chest about as
+    // near (2026-10-18_puzzles, 2026-11-21_a-s4-puzzles, 2026-11-22_play), and 65501 on 2026-11-22_play
+    // at 10.1 is ticked
     const std::map<std::string, std::vector<int32_t>> right = {
         { "2026-10-14_21-47", { 4831, 4620 } },
         { "2026-10-17_18-39", { 1305 } },
         { "2026-10-18_pickups2-check", { 53912, 29159, 30299, 0, 0 } },
         { "2026-10-18_puzzles", { 29061, 29109, 29065, 29064, 29111, 29009, 29010, 29008, 31126, 33000, 30581, 31326,
-                                  29126, 36953, 42155 } },
+                                  29126, 0, 36953, 42155 } },
         { "2026-10-19_puzzles", { 2828, 2829, 945, 2795, 2816, 4739, 29189, 32803, 29190, 29342, 81509, 29142 } },
         { "2026-10-19_puzzles-live", { 72367 } },
         { "2026-10-19_puzzles-live-2", { 72279, 73946 } },
         { "2026-10-19_stonepile", { 32859 } },
-        { "2026-11-21_a-s4-puzzles", { 65434, 64877, 64874, 65081, 64804, 65046, 65047, 64994, 64949, 64971, 65266, 65069 } },
-        { "2026-11-22_play", { 0, 65365, 64803, 64802, 64856, 64916, 64875, 65022, 64798, 65450, 64799, 64876, 64800, 64921,
-                               65435, 64920, 65502, 64868, 65436, 64969, 65048, 64898, 64805, 64970, 64806, 65367, 65368, 104473,
+        { "2026-11-21_a-s4-puzzles", { 65434, 64877, 64874, 65081, 0, 64804, 65046, 65047, 64994, 64949, 64971, 65266, 65069 } },
+        { "2026-11-22_play", { 0, 65365, 64803, 64802, 64856, 64916, 64875, 65022, 0, 64798, 65450, 64799, 64876, 64800, 64921,
+                               65435, 64920, 65502, 64868, 65436, 65501, 64969, 65048, 64898, 64805, 64970, 64806, 65367, 65368, 104473,
                                0, 0, 0, 0, 0, 0, 104610, 101909, 100876, 101692, 101693, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100812,
                                0, 0, 0, 0, 0, 104451, 0, 0, 101840, 0, 0, 101839, 101712, 101838, 0, 0, 0, 0, 0, 0, 101911, 0, 0,
                                0, 0, 101910, 0, 0, 0, 0 } },
