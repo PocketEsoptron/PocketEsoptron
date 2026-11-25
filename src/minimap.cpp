@@ -192,6 +192,8 @@ namespace MiniMap {
     static Spot player;
     // when GetPlayer was last called, steady_clock seconds
     static std::atomic<double> askedAt{ -1000.0 };
+    // and Watch
+    static std::atomic<double> watchedAt{ -1000.0 };
 
     static double now() {
         return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -1422,7 +1424,7 @@ namespace MiniMap {
                 if (wake.wait_for(lock, EVERY, []() { return stopping; })) return;
             }
             double seconds = now();
-            if (seconds - askedAt.load() > ASKED_FOR) continue;
+            if (seconds - std::max(askedAt.load(), watchedAt.load()) > ASKED_FOR) continue;
             // The map data is still being checked, or downloaded on the
             // first start. A whole map made now would be made for nothing.
             if (MapTracking::GetStatus() == MapTracking::Status::Downloading) continue;
@@ -1509,6 +1511,11 @@ namespace MiniMap {
 
     Spot GetPlayer() {
         askedAt = now();
+        return Watch();
+    }
+
+    Spot Watch() {
+        watchedAt = now();
         std::lock_guard<std::mutex> lock(mutex);
         // right away, the thread may be in the middle of a search
         if (MapTracking::IsMapOpen() || !MapTracking::GameInFront()) hide(player);

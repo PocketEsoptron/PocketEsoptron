@@ -6,11 +6,11 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include "../marker_index.hpp"
 #include "world.hpp"
 
 namespace GameTables { class Tables; }
 namespace ItemCatalog { class Catalog; }
-namespace MarkerIndex { class Index; }
 
 // Which map item type each of the game's gadgets is. Every placed object the
 // game shows near the player votes for the type of the one map item it sits
@@ -60,9 +60,10 @@ namespace Links {
         int32_t point = 0;
         double distance = 0;
     };
-    // the vote of an object at (map, x, y): the one map item of the route's types
-    // there, NONE when there's none or a place of another type is nearer
-    extern Vote VoteAt(const MarkerIndex::Index& index, const Types& types, Route route, int map, double x, double y);
+    // the vote of an object at (map, x, y) on the floor: the one map item of the
+    // route's types there, NONE when there's none or a place of another type is nearer
+    extern Vote VoteAt(const MarkerIndex::Index& index, const Types& types, Route route, int map, double x, double y,
+                       MarkerIndex::Floor floor);
 
     using Known = std::map<uint32_t, int>;
 

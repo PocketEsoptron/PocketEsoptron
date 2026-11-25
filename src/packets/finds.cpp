@@ -13,6 +13,7 @@
 #include "../marker_index.hpp"
 #include "../regrow.hpp"
 #include "../settings.hpp"
+#include "floors.hpp"
 #include "scene.hpp"
 
 namespace Finds {
@@ -103,6 +104,7 @@ namespace Finds {
         switch (event.what) {
         case World::What::Appeared:
             m_links.See(event.object, *m_index, m_catalog->game, m_types);
+            wantFloor(event.object, event.ms);
             seen(event.object, event.ms, out);
             dropped(event.object, event.ms);
             break;
@@ -123,6 +125,40 @@ namespace Finds {
         default:
             break;
         }
+    }
+
+    void Finder::SetPlayerFloor(int map, int group, int floor) {
+        m_playerMap = 0;
+        m_playerFloor = Floors::Of();
+        if (!map || !m_index)
+            return;
+        if (!group) {
+            m_playerFloor = { true, MarkerIndex::Floor::Over() };
+        } else if (m_index->HasFloor(uint16_t(group), uint16_t(floor))) {
+            m_playerFloor = { true, MarkerIndex::Floor::Under(uint16_t(group), uint16_t(floor)) };
+        } else {
+            return;
+        }
+        m_playerMap = map;
+    }
+
+    Floors::Of Finder::floorOf(uint32_t group, const std::unordered_set<int>& types, int map, double x, double y,
+                               double reach) const {
+        Floors::Of floor = Floors::At(group, *m_index, types, map, x, y, reach);
+        if (!floor.known && map == m_playerMap)
+            return m_playerFloor;
+        return floor;
+    }
+
+    void Finder::wantFloor(const World::Object& object, uint64_t ms) {
+        int type = m_links.TypeOf(object.gadget);
+        int map = Links::MapOf(object.group);
+        Scene::MapPos at;
+        if (!type || !object.hasPos || !map || !Scene::ToMap(object.pos, map, at))
+            return;
+        double reach = std::max(2 * PICKUP_RADIUS, PICKUP_RADIUS + Links::MARGIN);
+        if (!Floors::At(object.group, *m_index, typesFor(type), map, at.x, at.y, reach).known)
+            m_floorWanted = std::max(m_floorWanted, ms + FLOOR_WANTED);
     }
 
     void Finder::Settle(uint64_t ms) {
@@ -206,7 +242,7 @@ namespace Finds {
     }
 
     // The one map item of the puzzle's type clearly nearest to one of its parts,
-    // the parts tried in turn. Not sure when no part has one.
+    // the parts tried in turn, each on its floor. Not sure when no part has one.
     void Finder::solved(const std::vector<Puzzles::Solved>& solved, std::vector<Found>& out) {
         for (const Puzzles::Solved& s : solved) {
             Found found;
@@ -220,8 +256,10 @@ namespace Finds {
                 Scene::MapPos at;
                 if (!part.hasPos || !map || !Scene::ToMap(part.pos, map, at))
                     continue;
+                Floors::Of floor = floorOf(part.group, types, map, at.x, at.y,
+                    std::max(2 * PUZZLE_RADIUS, PUZZLE_RADIUS + Links::MARGIN));
                 MarkerIndex::Near near = m_index->UniqueNear(types, map, at.x, at.y, PUZZLE_RADIUS, Links::MARGIN,
-                    MarkerIndex::Floor::Any(), &m_taken);
+                    floor.floor, &m_taken);
                 if (!near.nearest)
                     continue;
                 if (!found.map) {
@@ -231,7 +269,11 @@ namespace Finds {
                     found.x = at.x;
                     found.y = at.y;
                 }
-                if (near.unique) {
+                found.maybeNone = found.maybeNone || !floor.known;
+                if (near.unique && !floor.known) {
+                    if (std::find(found.candidates.begin(), found.candidates.end(), near.nearest->id) == found.candidates.end())
+                        found.candidates.push_back(near.nearest->id);
+                } else if (near.unique) {
                     found.gadget = part.gadget;
                     found.config = part.config;
                     found.map = map;
@@ -239,6 +281,7 @@ namespace Finds {
                     found.y = at.y;
                     found.point = near.nearest->id;
                     found.candidates.clear();
+                    found.maybeNone = false;
                     break;
                 }
                 for (const ItemCatalog::Point* p : near.close)
@@ -338,9 +381,9 @@ namespace Finds {
         return types;
     }
 
-    // The one map item of the gadget's types at the object, not done yet. Not sure
-    // when two fit, or when another object of those types the World has sits about
-    // as near to it.
+    // The one map item of the gadget's types at the object on its floor, not done
+    // yet. Not sure when two fit, when another object of those types the World has
+    // sits about as near to it, or when its floor isn't known (then any floor's).
     bool Finder::find(How how, const World::Object& object, uint64_t ms, const World::World& world, Found& out, uint32_t item) {
         int type = m_links.TypeOf(object.gadget);
         int map = Links::MapOf(object.group);
@@ -355,8 +398,10 @@ namespace Finds {
             return false;
         std::unordered_set<int> types = typesFor(type);
         double radius = how == How::PickedUp && regrow.grows() ? PICKUP_RADIUS : Links::RADIUS;
+        Floors::Of floor = floorOf(object.group, types, map, at.x, at.y,
+            std::max(2 * radius, radius + Links::MARGIN));
         MarkerIndex::Near near = m_index->UniqueNear(types, map, at.x, at.y, radius, Links::MARGIN,
-            MarkerIndex::Floor::Any(), regrow.grows() ? &m_growingTaken : &m_taken);
+            floor.floor, regrow.grows() ? &m_growingTaken : &m_taken);
         if (!near.nearest)
             return false;
         out = Found();
@@ -388,7 +433,8 @@ namespace Finds {
                 && std::find(out.rivals.begin(), out.rivals.end(), std::make_pair(other.group, other.config)) == out.rivals.end())
                 out.rivals.push_back({ other.group, other.config });
         }
-        if (near.unique && out.rivals.empty()) {
+        out.maybeNone = !floor.known;
+        if (near.unique && out.rivals.empty() && floor.known) {
             out.point = point.id;
             m_found.insert(point.id);
             m_taken.insert(point.id);
@@ -463,6 +509,10 @@ namespace Finds {
             bool saves = true;
             bool unsaved = false;
             std::chrono::steady_clock::time_point saved;
+            PlayerFloor playerFloor;
+            // the player's floor, and since when it's shown
+            int map = 0, group = 0, floor = 0;
+            std::chrono::steady_clock::time_point floorSince;
         };
     }
 
@@ -754,12 +804,40 @@ namespace Finds {
         }
     }
 
-    void Start(const std::filesystem::path& folder) {
+    // a floor shown this long is the player's, not one passed on the way
+    static constexpr auto FLOOR_STEADY = std::chrono::seconds(3);
+
+    // the player's floor, asked for only while an object whose floor isn't known is around
+    static void askFloor(Running& r, uint64_t ms) {
+        if (!r.playerFloor || ms > r.finder.FloorWantedUntil()) {
+            if (r.map)
+                r.finder.SetPlayerFloor(0, 0, 0);
+            r.map = 0;
+            return;
+        }
+        int map = 0, group = 0, floor = 0;
+        if (!r.playerFloor(map, group, floor))
+            map = group = floor = 0;
+        auto now = std::chrono::steady_clock::now();
+        if (map != r.map || group != r.group || floor != r.floor) {
+            r.map = map;
+            r.group = group;
+            r.floor = floor;
+            r.floorSince = now;
+        }
+        if (r.map && now - r.floorSince >= FLOOR_STEADY)
+            r.finder.SetPlayerFloor(r.map, r.group, r.floor);
+        else
+            r.finder.SetPlayerFloor(0, 0, 0);
+    }
+
+    void Start(const std::filesystem::path& folder, PlayerFloor playerFloor) {
         std::lock_guard lock(mutex);
         if (worldListener)
             return;
         running = std::make_shared<Running>();
         running->file = folder / FILE_NAME;
+        running->playerFloor = std::move(playerFloor);
         running->saves = LoadVotes(running->file, running->links);
         running->saved = std::chrono::steady_clock::now();
         setLearned(running->links);
@@ -785,6 +863,7 @@ namespace Finds {
                         r.finder.SetDone(doneAgreed, growingAll);
                     }
                 }
+                askFloor(r, event.ms);
                 World::Visit([&](const World::World& world) { r.finder.Feed(event, world, found); });
                 r.unsaved = r.links.TakeUnsaved() || r.unsaved;
                 if (r.links.TakeChanged()) {

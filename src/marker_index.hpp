@@ -41,6 +41,10 @@ namespace MarkerIndex {
         Near UniqueNear(const std::unordered_set<int>& types, int map, double x, double y, double radius,
                         double margin = 5, Floor floor = Floor::Any(),
                         const std::unordered_set<int32_t>* taken = nullptr) const;
+        // a point of the types under ground within reach
+        bool UnderNear(const std::unordered_set<int>& types, int map, double x, double y, double reach) const;
+        // some point is on this underground floor
+        bool HasFloor(uint16_t group, uint16_t floor) const { return m_floors.count(uint32_t(group) << 16 | floor) > 0; }
 
         const ItemCatalog::Catalog& Catalog() const { return *m_catalog; }
         uint64_t Version() const { return m_catalog->version; }
@@ -52,6 +56,8 @@ namespace MarkerIndex {
         std::shared_ptr<const ItemCatalog::Catalog> m_catalog;
         // (cell key, index into the catalog's allPoints), by key
         std::vector<std::pair<uint64_t, uint32_t>> m_cells;
+        // group << 16 | floor of every underground floor with a point
+        std::unordered_set<uint32_t> m_floors;
     };
 
     // the index of the catalog in use, made again when a new catalog is in;

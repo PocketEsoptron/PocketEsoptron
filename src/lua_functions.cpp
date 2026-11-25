@@ -2928,6 +2928,7 @@ namespace LuaFunctions {
 				int r = 1;
 				for (auto& [group, config] : f.rivals) rivals[r++] = objectKey(group, config);
 				each["rivals"] = rivals;
+				if (f.maybeNone) each["maybe_none"] = true;
 			}
 			list[i++] = each;
 		}

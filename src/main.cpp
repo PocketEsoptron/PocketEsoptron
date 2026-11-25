@@ -298,7 +298,13 @@ int main(int argc, char** argv) {
     MiniMap::Start(Helpers::dataDirectory() / "map_data");
     Learning::Start(Helpers::dataDirectory());
     World::Start();
-    Finds::Start(Helpers::dataDirectory());
+    Finds::Start(Helpers::dataDirectory(), [](int& map, int& group, int& floor) {
+        MiniMap::Spot spot = MiniMap::Watch();
+        map = spot.mapId;
+        group = spot.groupId;
+        floor = spot.floorId;
+        return spot.found;
+    });
     // off until the player turns it on in the menu
     if (Settings::readGameTraffic) GameTraffic::Start();
     Extensions::initExtensions();

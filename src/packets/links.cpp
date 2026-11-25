@@ -11,6 +11,7 @@
 #include "../item_catalog.hpp"
 #include "../marker_index.hpp"
 #include "../regrow.hpp"
+#include "floors.hpp"
 #include "scene.hpp"
 
 namespace Links {
@@ -86,11 +87,12 @@ namespace Links {
         return scene >= 131 && scene <= 133 ? TEYVAT : 0;
     }
 
-    Vote VoteAt(const MarkerIndex::Index& index, const Types& types, Route route, int map, double x, double y) {
-        MarkerIndex::Near near = index.UniqueNear(types.of(route), map, x, y, RADIUS, MARGIN);
+    Vote VoteAt(const MarkerIndex::Index& index, const Types& types, Route route, int map, double x, double y,
+                MarkerIndex::Floor floor) {
+        MarkerIndex::Near near = index.UniqueNear(types.of(route), map, x, y, RADIUS, MARGIN, floor);
         if (!near.nearest)
             return {};
-        MarkerIndex::Near any = index.UniqueNear(types.places, map, x, y, near.distance);
+        MarkerIndex::Near any = index.UniqueNear(types.places, map, x, y, near.distance, MARGIN, floor);
         if (any.nearest && any.distance < near.distance && !types.of(route).count(any.nearest->type))
             return {};
         if (!near.unique)
@@ -177,7 +179,11 @@ namespace Links {
         Route route = RouteOf(object.gadget, tables);
         if (route == Route::None)
             return;
-        Cast(object.gadget, object.group, object.config, VoteAt(index, types, route, map, at.x, at.y));
+        // an object whose floor isn't known tells nothing, the map item near may be on another floor
+        Floors::Of floor = Floors::At(object.group, index, types.of(route), map, at.x, at.y, std::max(2 * RADIUS, RADIUS + MARGIN));
+        if (!floor.known)
+            return;
+        Cast(object.gadget, object.group, object.config, VoteAt(index, types, route, map, at.x, at.y, floor.floor));
     }
 
     // The type most of its objects sit on: at least AGREE of them, twice as many

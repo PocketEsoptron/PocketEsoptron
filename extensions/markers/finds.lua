@@ -1,13 +1,14 @@
 -- Ticks the map items the overlay finds done while it reads the game's
 -- traffic, while auto is on. A find it can't pin to one map item waits with
 -- the ones it can be (its maybes, shown with a "?" on the map). It's ticked
--- once one is left and no other object may own it, or when as many waiting
--- finds as map items share a set of them. The player's own tap on a maybe
--- takes one find that waited on it; other ticks only leave it out of the
--- finds. A find of a thing that grows back has back_at, and its tick comes
--- off by itself then, also after a restart, or sooner when the overlay sees
--- its object again. Kept in finds.json. The ticks and what waits to grow back
--- go to the overlay, so its finds pass over them.
+-- once one is left, no other object may own it and its floor is known, or
+-- when as many such waiting finds as map items share a set of them. The
+-- player's own tap on a maybe takes one find that waited on it; other ticks
+-- only leave it out of the finds. A find of a thing that grows back has
+-- back_at, and its tick comes off by itself then, also after a restart, or
+-- sooner when the overlay sees its object again. Kept in finds.json. The
+-- ticks and what waits to grow back go to the overlay, so its finds pass over
+-- them.
 
 local collected = require("collected")
 
@@ -21,7 +22,8 @@ local SPLIT = 12
 
 -- the newest find taken, so none is taken twice, also after a restart
 local last = 0
--- { maybe = { point ids }, rivals = { objects }, back = back_at or nil, object = "group/config" or nil }
+-- { maybe = { point ids }, rivals = { objects }, back = back_at or nil, object = "group/config" or nil,
+--   none = true when it may be none of them }
 local waiting = {}
 -- point id -> when its tick comes off, in Unix seconds
 local back = {}
@@ -107,12 +109,18 @@ local function tickUntil(list, at, from)
     collected.change(list, {}, "auto")
 end
 
+-- the find's map item is one of its maybes: no rivals, and its floor known
+local function exactly(w)
+    return #w.rivals == 0 and not w.none
+end
+
 -- the indexes of waiting finds whose map items must all be done: one left
--- of a find with no rivals, or a few such finds with only as many between them
+-- of a find with no rivals that can't be none of them, or a few such finds
+-- with only as many between them
 local function sure()
     local exact = {}
     for i, w in ipairs(waiting) do
-        if #w.rivals == 0 then exact[#exact + 1] = i end
+        if exactly(w) then exact[#exact + 1] = i end
     end
     -- the exact ones that share map items, together
     local groupOf, groups = {}, {}
@@ -249,7 +257,8 @@ function finds.take(list)
                 else
                     local maybe = ids(f.maybe)
                     if #maybe > 0 then
-                        waiting[#waiting + 1] = { maybe = maybe, rivals = texts(f.rivals), back = backAt(f.back_at), object = object }
+                        waiting[#waiting + 1] = { maybe = maybe, rivals = texts(f.rivals), back = backAt(f.back_at), object = object,
+                            none = f.maybe_none == true or nil }
                     end
                 end
             end
@@ -274,7 +283,8 @@ function finds.load()
             if type(w) == "table" then
                 local maybe = ids(w.maybe)
                 if #maybe > 0 then
-                    waiting[#waiting + 1] = { maybe = maybe, rivals = texts(w.rivals), back = backAt(w.back), object = text(w.object) }
+                    waiting[#waiting + 1] = { maybe = maybe, rivals = texts(w.rivals), back = backAt(w.back), object = text(w.object),
+                        none = w.none == true or nil }
                 end
             end
         end
@@ -385,14 +395,14 @@ collected.listen(function(id, on, from)
         return
     end
     -- the player's tick says which one a find was: the one with the fewest
-    -- maybes that holds it, one without rivals first
+    -- maybes that holds it, one that must be one of them first
     local best
     for i, w in ipairs(waiting) do
         for _, each in ipairs(w.maybe) do
             if each == id then
                 local b = best and waiting[best]
-                if not b or (#w.rivals == 0 and #b.rivals > 0)
-                    or ((#w.rivals == 0) == (#b.rivals == 0) and #w.maybe < #b.maybe) then
+                if not b or (exactly(w) and not exactly(b))
+                    or (exactly(w) == exactly(b) and #w.maybe < #b.maybe) then
                     best = i
                 end
                 break

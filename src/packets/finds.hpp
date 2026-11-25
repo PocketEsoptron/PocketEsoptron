@@ -9,6 +9,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include "floors.hpp"
 #include "links.hpp"
 #include "puzzles.hpp"
 #include "world.hpp"
@@ -47,6 +48,8 @@ namespace Finds {
         int32_t point = 0;
         // when point is 0: the ones that could be, nearest first
         std::vector<int32_t> candidates;
+        // when point is 0: it may be none of them, its floor isn't known (Floors::At)
+        bool maybeNone = false;
         // when point is 0: the other objects of the types (group, config) about as
         // near, whose map item it may be
         std::vector<std::pair<uint32_t, uint32_t>> rivals;
@@ -71,6 +74,8 @@ namespace Finds {
     inline constexpr uint64_t DROP_LIES = 10 * 60 * 1000;
     // how far a puzzle's map item may sit from one of its parts
     inline constexpr double PUZZLE_RADIUS = 12;
+    // the minimap's floor is wanted this long after an object whose floor isn't known came by
+    inline constexpr uint64_t FLOOR_WANTED = 60 * 1000;
 
     class Finder {
     public:
@@ -93,6 +98,15 @@ namespace Finds {
         // the puzzles the last moment finished, when no event comes after it
         void Finish(const World::World& world, std::vector<Found>& out);
 
+        // The floor the minimap shows the player on (HoYoLAB's group and floor,
+        // 0 and 0 over ground), map 0 when it isn't sure. A thing picked up,
+        // opened or solved whose own floor isn't known (Floors::At) is on it:
+        // the player is right there.
+        void SetPlayerFloor(int map, int group, int floor);
+        // Until when (an event's ms) the minimap's floor is wanted: an object
+        // whose floor isn't known came by lately. 0 when none did.
+        uint64_t FloorWantedUntil() const { return m_floorWanted; }
+
     private:
         struct Gone {
             World::Object object;
@@ -112,6 +126,9 @@ namespace Finds {
         };
 
         std::unordered_set<int> typesFor(int type) const;
+        // Floors::At, else the player's floor on that map
+        Floors::Of floorOf(uint32_t group, const std::unordered_set<int>& types, int map, double x, double y, double reach) const;
+        void wantFloor(const World::Object& object, uint64_t ms);
         bool find(How how, const World::Object& object, uint64_t ms, const World::World& world, Found& out, uint32_t item = 0);
         uint32_t itsItem(const Gone& gone, const Got& got) const;
         void gone(const World::Event& event, const World::World& world, std::vector<Found>& out);
@@ -147,6 +164,9 @@ namespace Finds {
         std::deque<Got> m_got;
         std::deque<Drop> m_drops;
         Puzzles::Tracker m_puzzles;
+        int m_playerMap = 0;
+        Floors::Of m_playerFloor;
+        uint64_t m_floorWanted = 0;
     };
 
     // What every extension gave as done (SetDone) goes to the running Finder:
@@ -167,7 +187,11 @@ namespace Finds {
 
     // The Finder on the World's events, for the whole run. The links' votes are
     // kept in learned-links.json in the data folder. Start after World::Start.
-    extern void Start(const std::filesystem::path& folder);
+    // The player's floor comes from playerFloor (the minimap's in the overlay):
+    // false when it isn't shown right now, else the map, HoYoLAB's group and
+    // floor (0 and 0 over ground). It's only called while Finder wants it.
+    typedef std::function<bool(int& map, int& group, int& floor)> PlayerFloor;
+    extern void Start(const std::filesystem::path& folder, PlayerFloor playerFloor = nullptr);
     extern void Stop();
 
     // Called on GameTraffic's worker thread for every find, keep it short.

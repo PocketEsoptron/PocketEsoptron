@@ -273,6 +273,9 @@ namespace MiniMap {
     // it stops two seconds after the last call. Not found while the big map
     // is open.
     extern Spot GetPlayer();
+    // GetPlayer for the overlay itself: keeps the minimap watched the same,
+    // but isn't an extension asking, see Wanted
+    extern Spot Watch();
     // An extension asked for the player in the last two seconds. The overlay
     // keeps running the extensions then, also with map and menu closed.
     extern bool Wanted();
