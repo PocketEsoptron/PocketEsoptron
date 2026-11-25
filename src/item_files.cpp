@@ -9,6 +9,7 @@
 #include "packets/learner.hpp"
 #include "packets/links.hpp"
 #include "packets/scene.hpp"
+#include "regrow.hpp"
 #include <algorithm>
 #include <atomic>
 #include <cctype>
@@ -886,14 +887,21 @@ namespace ItemFiles {
 		return out.dump();
 	}
 
-	std::string nameGatherItems(const std::string& trimmed, const std::string& materials,
+	std::string nameGrowingItems(const std::string& trimmed, const std::string& materials,
 		const std::string& gathers, const std::vector<std::string>& textMaps) {
-		json gatherRows = json::parse(gathers, nullptr, false), materialRows = json::parse(materials, nullptr, false);
+		json materialRows = json::parse(materials, nullptr, false);
 		ordered out = ordered::parse(trimmed, nullptr, false);
-		if (!gatherRows.is_array() || !materialRows.is_array() || !out.is_array()) return trimmed;
+		GameTables::Tables tables;
+		if (!materialRows.is_array() || !out.is_array() || !tables.read(GameTables::GATHERS, gathers)
+			|| !tables.read(GameTables::MATERIALS, trimmed))
+			return trimmed;
 		std::set<uint64_t> items;
-		for (const json& row : gatherRows)
-			if (row.is_object() && row.contains("itemId") && row["itemId"].is_number_unsigned()) items.insert(row["itemId"].get<uint64_t>());
+		for (const GameTables::Gather& gather : tables.allGathers())
+			items.insert(gather.item);
+		for (const json& row : out)
+			if (row.is_object() && row.contains("id") && row["id"].is_number_unsigned()
+				&& Regrow::Of(uint32_t(row["id"].get<uint64_t>()), tables).grows())
+				items.insert(row["id"].get<uint64_t>());
 		// item -> its name's hash, as the text maps write it
 		std::map<uint64_t, std::string> hashOf;
 		std::set<std::string> wanted;
@@ -972,7 +980,7 @@ namespace ItemFiles {
 				}
 				// names that didn't come are tried again on the next run, like a table
 				if (textMaps.size() != 2) kept = true;
-				std::string named = textMaps.size() == 2 ? nameGatherItems(trimmed, response.body, gathers, textMaps) : trimmed;
+				std::string named = textMaps.size() == 2 ? nameGrowingItems(trimmed, response.body, gathers, textMaps) : trimmed;
 				if (named == trimmed) {
 					std::cerr << "[items] the items have no names, the published ones are kept" << std::endl;
 					named = keepNames(trimmed, published[name]);

@@ -133,6 +133,13 @@ namespace Links {
     // regrows groups named like the item (case, spaces and a plural s aside):
     // Sumeru Rose to Sumeru Rose. Not for a gadget that gives more than one item.
     extern Known GathersByName(const GameTables::Tables& tables, const ItemCatalog::Catalog& catalog);
+    // the regrows groups' types by their names as ItemType compares them, 0 for a
+    // name two types have
+    extern std::map<std::string, int> RegrowsByName(const ItemCatalog::Catalog& catalog);
+    // The one type named like an item that grows back, 0 when none is. What a
+    // gather point really gives can be another item than its row says,
+    // Fontaine's Condessence rocks are rows of Crystal Chunk.
+    extern int ItemType(uint32_t item, const GameTables::Tables& tables, const std::map<std::string, int>& regrowsByName);
     // [{gadget, type}] and back, false when it doesn't read
     extern std::string KnownToJson(const Known& known);
     extern bool KnownFromJson(const std::string& text, Known& out);

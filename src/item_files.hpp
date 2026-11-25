@@ -177,10 +177,11 @@ namespace ItemFiles {
     // file keeps, by that file's name. Empty when the table doesn't read.
     extern std::string trimGameTable(const std::string& name, const std::string& table);
     // The trimmed materials with the English name of each item a gather point
-    // gives, from the whole MaterialExcelConfigData (nameTextMapHash) and
+    // gives or that grows back (Regrow): a rock's drop can give another than its
+    // row, Fontaine's Condessence. From the whole MaterialExcelConfigData (nameTextMapHash) and
     // AnimeGameData's text maps (TextMapEN and TextMap_MediumEN, the names are
     // split between them). As it was when a table doesn't read.
-    extern std::string nameGatherItems(const std::string& trimmed, const std::string& materials,
+    extern std::string nameGrowingItems(const std::string& trimmed, const std::string& materials,
         const std::string& gathers, const std::vector<std::string>& textMaps);
 
     // --make-items <folder> [--allow-drop]: downloads everything into

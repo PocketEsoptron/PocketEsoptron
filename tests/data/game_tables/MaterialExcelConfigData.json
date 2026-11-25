@@ -258,5 +258,47 @@
     "stackLimit": 99999,
     "typeDescTextMapHash": 2180610414,
     "weight": 1
+  },
+  {
+    "descTextMapHash": 3710625213,
+    "destroyRule": "DESTROY_RETURN_MATERIAL",
+    "effectDescTextMapHash": 1240234455,
+    "gadgetId": 70540066,
+    "icon": "UI_ItemIcon_101009",
+    "id": 101009,
+    "interactionTitleTextMapHash": 3236690159,
+    "isSplitDrop": true,
+    "itemType": "ITEM_MATERIAL",
+    "itemUse": [
+      {
+        "useParam": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "useParam": [
+          "",
+          ""
+        ]
+      }
+    ],
+    "materialType": "MATERIAL_EXCHANGE",
+    "nameTextMapHash": 3736537308,
+    "rank": 301,
+    "specialDescTextMapHash": 3293318497,
+    "stackLimit": 99999,
+    "typeDescTextMapHash": 4019214502,
+    "weight": 1
   }
 ]

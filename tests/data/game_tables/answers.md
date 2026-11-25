@@ -14,12 +14,13 @@ Whole rows of the game's 7.2 tables (animegamedata2, ExcelBinOutput, CNRELWin7.2
 - MaterialExcelConfigData.json: 100001 Apple (ITEM_MATERIAL, MATERIAL_NOTICE_ADD_HP, rank 90000),
   101001 Iron Chunk (MATERIAL_EXCHANGE, rank 301), 101003 Crystal Chunk (rank 301), 101249 Quenepa
   Berry (rank 316), 107023 Hydroculus (MATERIAL_ELEM_CRYSTAL, rank 420001), 101004 Magical Crystal
-  Chunk (rank 301).
+  Chunk (rank 301), 101009 Condessence Crystal (MATERIAL_EXCHANGE, rank 301), which no gather
+  row gives: Fontaine's rocks are rows of Crystal Chunk, the chunk they drop gives it.
 
 When they grow back (fandom wiki, Reset page): Apple and Iron Chunk at the next 0:00 on the
 server's clock, Crystal Chunk 72 h after the pickup, Quenepa Berry 48 h after it, Magical Crystal
 when the mining outcrops move at 6:00 on the server's clock; the Hydroculus never.
 
 - TextMapEN.json, TextMap_MediumEN.json (animegamedata2 main, TextMap, 2026-11-24): the first two entries of
-  each, and the names of the six materials above, all in the Medium map: Apple, Iron Chunk,
-  Crystal Chunk, Quenepa Berry, Hydroculus, Magical Crystal Chunk.
+  each, and the names of the seven materials above, all in the Medium map: Apple, Iron Chunk,
+  Crystal Chunk, Quenepa Berry, Hydroculus, Magical Crystal Chunk, and Condessence Crystal (2026-11-25).

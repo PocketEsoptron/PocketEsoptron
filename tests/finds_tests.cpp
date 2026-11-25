@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <map>
 #include <set>
@@ -145,7 +146,11 @@ TEST_CASE("The finds on every recording", "[finds]") {
     // kind, so it waits (0); the third rock mined there wasn't picked up before the end. The plants on
     // 11-22 grow a few to a map item, so most of them wait too. On g-s3-live every find was ticked by
     // Markers and checked by the player in game: a Frostfairy Flower, three ores, then a cluster of four
-    // Crystal Chunk rocks under four map items (each 0 alone, Markers ticks all four) and a Cor Lapis
+    // Crystal Chunk rocks under four map items (each 0 alone, Markers ticks all four) and a Cor Lapis.
+    // On g-s4-live the player mined an Iron Chunk and a Crystal Chunk rock in the Wenut Tunnels (the
+    // Iron Chunk grows back by the server's clock, not found without one; the Crystal Chunk's floor
+    // isn't known without the minimap, so 0), then three Condessence rocks in Fontaine under three map
+    // items: their rows say Crystal Chunk, the drops gave Condessence Crystal, each 0 alone
     const std::map<std::string, std::vector<int32_t>> right = {
         { "2026-10-14_21-47", { 4831, 4620 } },
         { "2026-10-17_18-39", { 1305 } },
@@ -164,6 +169,7 @@ TEST_CASE("The finds on every recording", "[finds]") {
                                0, 0, 101910, 0, 0, 0, 0 } },
         { "2026-11-24_g-s2-live", { 86295, 85997, 86071, 0, 0, 64852, 64813, 100836 } },
         { "2026-11-24_g-s3-live", { 101668, 5225, 1225, 664, 0, 0, 679, 0, 0 } },
+        { "2026-11-25_g-s4-live", { 0, 0, 0, 0 } },
     };
     for (const std::filesystem::path& recording : recordings) {
         auto it = right.find(recording.filename().string());
@@ -171,6 +177,97 @@ TEST_CASE("The finds on every recording", "[finds]") {
         INFO(recording.filename().string());
         CHECK(points(play(recording / "messages.bin", catalog, Learner::Shipped()).found) == expected);
     }
+}
+
+TEST_CASE("A rock whose row says Crystal Chunk is found by what its drop gave, Condessence Crystal", "[finds]") {
+    std::filesystem::path folder;
+    for (const std::filesystem::path& recording : RecordedMessages::recordings())
+        if (recording.filename() == "2026-11-25_g-s4-live") folder = recording;
+    auto catalog = installedPack();
+    if (folder.empty() || !catalog || !catalog->game.knowsRanks())
+        SKIP("no 2026-11-25_g-s4-live recording or no items pack with ranks on this PC");
+    std::vector<Finds::Found> found = play(folder / "messages.bin", catalog, Learner::Shipped()).found;
+    REQUIRE(found.size() == 4);
+    // the three rocks of group 133412143 by the lake, each with the three map items there
+    for (size_t i = 1; i < 4; i++) {
+        INFO(i);
+        CHECK(found[i].gadget == 70520042);
+        CHECK(found[i].item == 101009);
+        CHECK(found[i].type == 507);
+        std::vector<int32_t> candidates = found[i].candidates;
+        std::sort(candidates.begin(), candidates.end());
+        CHECK(candidates == std::vector<int32_t>{ 58399, 58400, 58401 });
+    }
+    // the Wenut Tunnels one is a plain Crystal Chunk
+    CHECK(found[0].gadget == 70520003);
+    CHECK(found[0].type == 16);
+}
+
+TEST_CASE("Pickups that grow back sit further than RADIUS from their map item, within PICKUP_RADIUS", "[finds]") {
+    auto catalog = installedPack();
+    if (!catalog || !catalog->game.knowsRanks()) SKIP("no items pack with ranks on this PC");
+    // a picked plant (item 100031) 11.5 from its map item, a Crystal Chunk rock 10.2 from its map item
+    const std::map<std::string, std::pair<int32_t, double>> far = {
+        { "2026-10-19_puzzles", { 945, 11.5 } },
+        { "2026-11-24_g-s3-live", { 5225, 10.2 } },
+    };
+    int seen = 0;
+    for (const std::filesystem::path& recording : RecordedMessages::recordings()) {
+        auto it = far.find(recording.filename().string());
+        if (it == far.end()) continue;
+        INFO(recording.filename().string());
+        bool there = false;
+        for (const Finds::Found& f : play(recording / "messages.bin", catalog, Learner::Shipped()).found) {
+            if (f.point != it->second.first) continue;
+            const ItemCatalog::Point* p = catalog->point(f.point);
+            REQUIRE(p);
+            double d = std::hypot(p->x - f.x, p->y - f.y);
+            CHECK(f.backAt > 0);
+            CHECK(d > Links::RADIUS);
+            CHECK(d < Finds::PICKUP_RADIUS);
+            CHECK(std::abs(d - it->second.second) < 0.1);
+            there = true;
+        }
+        CHECK(there);
+        seen++;
+    }
+    if (!seen) SKIP("none of the recordings on this PC");
+}
+
+TEST_CASE("Every drop on the recordings lies well within PICKUP_RADIUS of the gather point it came from", "[finds]") {
+    // the drop (an object with no group) and its gone gather point within SAME_MOMENT: on the recordings
+    // of 2026-10 to 2026-11 the furthest is 7.9 from its rock (an ore chunk on 2026-11-22_play)
+    double furthest = 0;
+    int drops = 0;
+    for (const std::filesystem::path& recording : RecordedMessages::recordings()) {
+        Learner::Learner learner(Learner::Shipped());
+        World::World world;
+        std::vector<Learner::Event> in;
+        std::vector<World::Event> events, gone;
+        for (const Messages::Message& m : RecordedMessages::read(recording / "messages.bin")) {
+            learner.Feed(m, in);
+            for (const Learner::Event& e : in) world.Feed(e, events);
+            in.clear();
+            for (const World::Event& e : events) {
+                if (e.what == World::What::Left && e.reason == 2 && e.object.group && e.object.hasPos) gone.push_back(e);
+                if (e.what != World::What::Appeared || e.object.group || !e.object.hasPos) continue;
+                double best = -1;
+                for (const World::Event& g : gone) {
+                    if ((g.ms > e.ms ? g.ms - e.ms : e.ms - g.ms) > Finds::SAME_MOMENT) continue;
+                    double d = std::hypot((double)g.object.pos.x - e.object.pos.x, (double)g.object.pos.z - e.object.pos.z);
+                    if (best < 0 || d < best) best = d;
+                }
+                if (best < 0) continue;
+                furthest = std::max(furthest, best);
+                drops++;
+            }
+            events.clear();
+        }
+    }
+    if (!drops) SKIP("no recordings with drops on this PC");
+    CHECK(drops >= 44);
+    CHECK(furthest < 8);
+    CHECK(furthest < Finds::PICKUP_RADIUS / 1.5);
 }
 
 TEST_CASE("A local specialty picked on a recording is back 48 h after the pickup", "[finds]") {
@@ -441,3 +538,33 @@ TEST_CASE("The overlay's own record says a picked Starconch grew back only once 
     CHECK_FALSE(record.Unmarked({ 4620 }));
 }
 
+TEST_CASE("Three rocks on the same three map items: any of them seen again makes the map items back", "[finds]") {
+    std::filesystem::path folder;
+    for (const std::filesystem::path& recording : RecordedMessages::recordings())
+        if (recording.filename() == "2026-11-25_g-s4-live") folder = recording;
+    auto catalog = installedPack();
+    if (folder.empty() || !catalog || !catalog->game.knowsRanks())
+        SKIP("no 2026-11-25_g-s4-live recording or no items pack with ranks on this PC");
+    std::vector<Finds::Found> found = play(folder / "messages.bin", catalog, Learner::Shipped()).found;
+    REQUIRE(found.size() == 4);
+    for (int first = 1; first < 4; first++) {
+        INFO(first);
+        Finds::GrowingRecord record;
+        for (size_t i = 1; i < 4; i++) record.Add(found[i], 1);
+        REQUIRE(record.Size() == 3);
+        const int64_t soon = 3600;
+        CHECK_FALSE(record.AllBack({ 58399, 58400, 58401 }, soon));
+        Finds::Found again = found[first];
+        again.how = Finds::How::Back;
+        again.candidates.clear();
+        record.Add(again, soon);
+        CHECK(record.AllBack({ 58399, 58400, 58401 }, soon));
+        // and saved and read back, it still knows every rock
+        Finds::GrowingRecord saved;
+        for (size_t i = 1; i < 4; i++) saved.Add(found[i], 1);
+        Finds::GrowingRecord read;
+        read.FromJson(saved.ToJson(), 1);
+        read.Add(again, soon);
+        CHECK(read.AllBack({ 58399, 58400, 58401 }, soon));
+    }
+}

@@ -64,26 +64,27 @@ TEST_CASE("The game's tables are cut to the fields game/ keeps", "[game_tables]"
     CHECK(gathers[0] == nlohmann::json({ { "gadgetId", 70540003 }, { "itemId", 100001 }, { "pointType", 2006 }, { "refreshId", 999900 } }));
     CHECK(gathers[3] == nlohmann::json({ { "gadgetId", 70590074 }, { "itemId", 107023 }, { "pointType", 4016 } }));
     nlohmann::json materials = nlohmann::json::parse(ItemFiles::trimGameTable(GameTables::MATERIALS, table("MaterialExcelConfigData.json")));
-    REQUIRE(materials.size() == 6);
+    REQUIRE(materials.size() == 7);
     CHECK(materials[0] == nlohmann::json({ { "id", 100001 }, { "itemType", "ITEM_MATERIAL" }, { "materialType", "MATERIAL_NOTICE_ADD_HP" }, { "rank", 90000 } }));
     CHECK(ItemFiles::trimGameTable(GameTables::GADGETS, "not json").empty());
     CHECK(ItemFiles::trimGameTable("game/other.json", table("GadgetExcelConfigData.json")).empty());
 }
 
-TEST_CASE("The items gather points give get their names from the text maps, the rest none", "[game_tables]") {
+TEST_CASE("The items gather points give and the ones that grow back get their names from the text maps", "[game_tables]") {
     std::string materials = table("MaterialExcelConfigData.json");
     std::string trimmed = ItemFiles::trimGameTable(GameTables::MATERIALS, materials);
     std::vector<std::string> maps = { table("TextMapEN.json"), table("TextMap_MediumEN.json") };
-    nlohmann::json named = nlohmann::json::parse(ItemFiles::nameGatherItems(trimmed, materials, table("GatherExcelConfigData.json"), maps));
-    REQUIRE(named.size() == 6);
-    const char* names[] = { "Apple", "Iron Chunk", "Crystal Chunk", "Quenepa Berry", "Hydroculus" };
-    for (size_t i = 0; i < 5; i++)
+    nlohmann::json named = nlohmann::json::parse(ItemFiles::nameGrowingItems(trimmed, materials, table("GatherExcelConfigData.json"), maps));
+    REQUIRE(named.size() == 7);
+    // no gather point gives the Magical Crystal Chunk (the outcrops do) or the Condessence Crystal
+    // (Fontaine's rocks are rows of Crystal Chunk, their drop gives it), both grow back
+    const char* names[] = { "Apple", "Iron Chunk", "Crystal Chunk", "Quenepa Berry", "Hydroculus", "Magical Crystal Chunk",
+                            "Condessence Crystal" };
+    for (size_t i = 0; i < 7; i++)
         CHECK(named[i].value("name", "") == names[i]);
-    // the Magical Crystal Chunk comes from the outcrops, no gather point gives it
-    CHECK(!named[5].contains("name"));
-    CHECK(named[5]["rank"] == 301);
+    CHECK(named[6]["id"] == 101009);
     // a text map that doesn't read leaves the table as it was
-    CHECK(ItemFiles::nameGatherItems(trimmed, materials, table("GatherExcelConfigData.json"), { "not json" }) == trimmed);
+    CHECK(ItemFiles::nameGrowingItems(trimmed, materials, table("GatherExcelConfigData.json"), { "not json" }) == trimmed);
 }
 
 TEST_CASE("A pack with game/ gives the tables, the ids and the formulas", "[game_tables]") {

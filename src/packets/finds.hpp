@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -113,6 +114,8 @@ namespace Finds {
             uint64_t ms = 0;
             // when it left, for a drop the time its gather point did
             uint64_t at = 0;
+            // it's a gather point that came back as the drop it left
+            bool drop = false;
         };
         // what a gather point left on the ground, an ore's chunk: its item comes
         // when that is picked up
@@ -131,6 +134,7 @@ namespace Finds {
         void wantFloor(const World::Object& object, uint64_t ms);
         bool find(How how, const World::Object& object, uint64_t ms, const World::World& world, Found& out, uint32_t item = 0);
         uint32_t itsItem(const Gone& gone, const Got& got) const;
+        int itemType(uint32_t item) const;
         void gone(const World::Event& event, const World::World& world, std::vector<Found>& out);
         void got(const World::Event& event, const World::World& world, std::vector<Found>& out);
         void dropped(const World::Object& object, uint64_t ms);
@@ -142,6 +146,8 @@ namespace Finds {
         std::shared_ptr<const ItemCatalog::Catalog> m_catalog;
         std::shared_ptr<const MarkerIndex::Index> m_index;
         Links::Types m_types;
+        // Links::RegrowsByName of the pack
+        std::map<std::string, int> m_regrowsByName;
         using Key = std::pair<uint32_t, uint32_t>;
         struct Back {
             int64_t at = 0;

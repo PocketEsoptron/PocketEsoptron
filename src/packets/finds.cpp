@@ -42,6 +42,7 @@ namespace Finds {
             m_index = current && &current->Catalog() == m_catalog.get() ? current : std::make_shared<const MarkerIndex::Index>(m_catalog);
         }
         m_types = m_catalog ? Links::TypesOf(*m_catalog) : Links::Types();
+        m_regrowsByName = m_catalog ? Links::RegrowsByName(*m_catalog) : std::map<std::string, int>();
         m_waiting.clear();
         m_puzzles = Puzzles::Tracker();
     }
@@ -308,7 +309,16 @@ namespace Finds {
             for (const auto& [item, count] : got.items)
                 if (item == gather.item)
                     return item;
+        // a drop gives what the rock really holds, which its row may not say
+        if (gone.drop)
+            for (const auto& [item, count] : got.items)
+                if (itemType(item))
+                    return item;
         return 0;
+    }
+
+    int Finder::itemType(uint32_t item) const {
+        return m_catalog ? Links::ItemType(item, m_catalog->game, m_regrowsByName) : 0;
     }
 
     // An object without a group that shows up near a gather point as it goes is
@@ -342,6 +352,7 @@ namespace Finds {
         if (drop != m_drops.end()) {
             g = drop->point;
             g.ms = event.ms;
+            g.drop = true;
             m_drops.erase(drop);
         }
         Links::Route route = Links::RouteOf(g.object.gadget, m_catalog->game);
@@ -385,7 +396,10 @@ namespace Finds {
     // yet. Not sure when two fit, when another object of those types the World has
     // sits about as near to it, or when its floor isn't known (then any floor's).
     bool Finder::find(How how, const World::Object& object, uint64_t ms, const World::World& world, Found& out, uint32_t item) {
-        int type = m_links.TypeOf(object.gadget);
+        // the item got tells what it was before the gadget's link does
+        int type = itemType(item);
+        if (!type)
+            type = m_links.TypeOf(object.gadget);
         int map = Links::MapOf(object.group);
         Scene::MapPos at;
         if (!type || !object.hasPos || !map || !Scene::ToMap(object.pos, map, at)

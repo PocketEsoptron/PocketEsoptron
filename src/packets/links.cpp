@@ -396,30 +396,37 @@ namespace Links {
         return out;
     }
 
-    Known GathersByName(const GameTables::Tables& tables, const ItemCatalog::Catalog& catalog) {
+    std::map<std::string, int> RegrowsByName(const ItemCatalog::Catalog& catalog) {
         Types types = TypesOf(catalog);
-        // name -> type, 0 when two types have it
-        std::map<std::string, int> typeNamed;
+        std::map<std::string, int> out;
         for (const ItemCatalog::TypeGroup& group : catalog.groups)
             for (const ItemCatalog::Type& type : group.types)
                 if (types.regrows.count(type.id)) {
-                    auto [at, added] = typeNamed.emplace(nameKey(type.name), type.id);
+                    auto [at, added] = out.emplace(nameKey(type.name), type.id);
                     if (!added && at->second != type.id) at->second = 0;
                 }
+        return out;
+    }
+
+    int ItemType(uint32_t item, const GameTables::Tables& tables, const std::map<std::string, int>& regrowsByName) {
+        GameTables::Material material;
+        if (!item || !tables.material(item, material) || material.name.empty() || !Regrow::Of(item, tables).grows())
+            return 0;
+        auto type = regrowsByName.find(nameKey(material.name));
+        return type != regrowsByName.end() ? type->second : 0;
+    }
+
+    Known GathersByName(const GameTables::Tables& tables, const ItemCatalog::Catalog& catalog) {
+        std::map<std::string, int> regrowsByName = RegrowsByName(catalog);
         Known out;
         std::map<uint32_t, uint32_t> itemOf;
         for (const GameTables::Gather& gather : tables.allGathers()) {
             auto [at, added] = itemOf.emplace(gather.gadget, gather.item);
             if (!added && at->second != gather.item) at->second = 0;
         }
-        for (auto& [gadget, item] : itemOf) {
-            GameTables::Material material;
-            if (!item || !tables.material(item, material) || material.name.empty() || !Regrow::Of(item, tables).grows())
-                continue;
-            auto type = typeNamed.find(nameKey(material.name));
-            if (type != typeNamed.end() && type->second)
-                out[gadget] = type->second;
-        }
+        for (auto& [gadget, item] : itemOf)
+            if (int type = ItemType(item, tables, regrowsByName))
+                out[gadget] = type;
         return out;
     }
 
