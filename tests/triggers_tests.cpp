@@ -186,7 +186,7 @@ TEST_CASE("Player runs on found, lost and moved, found or lost over moved", "[tr
     TestExtension::unloadAll();
 }
 
-TEST_CASE("Items runs on a new list and while the list loads", "[triggers]") {
+TEST_CASE("Items runs on a new list, on new auto types and while the list loads", "[triggers]") {
     Extensions::Extension* ext = counting("triggers_items", "Items Items:list");
     REQUIRE(ext != nullptr);
     Extensions::allow(*ext, Permission::MapInfo);
@@ -208,6 +208,30 @@ TEST_CASE("Items runs on a new list and while the list loads", "[triggers]") {
     CHECK(changed(ext, "Items") == "list");
     CHECK(given(ext, "Items").as<sol::table>()["version"].get<int>() == 3);
     CHECK(runs(ext, "Items:list") == 1);
+
+    state.autoTypes = 2;
+    Triggers::check(state);
+    CHECK(runs(ext, "Items") == 3);
+    CHECK(changed(ext, "Items") == "auto");
+    CHECK(runs(ext, "Items:list") == 1);
+    TestExtension::unloadAll();
+}
+
+TEST_CASE("Finds runs on a new find", "[triggers]") {
+    Extensions::Extension* ext = counting("triggers_finds", "Finds Finds:new");
+    REQUIRE(ext != nullptr);
+    Extensions::allow(*ext, Permission::MapInfo);
+    Triggers::State state;
+    Triggers::check(state);
+    Triggers::check(state);
+    CHECK(runs(ext, "Finds") == 0);
+    state.lastFind = 6;
+    Triggers::check(state);
+    CHECK(runs(ext, "Finds") == 1);
+    CHECK(changed(ext, "Finds") == "new");
+    CHECK(runs(ext, "Finds:new") == 1);
+    Triggers::check(state);
+    CHECK(runs(ext, "Finds") == 1);
     TestExtension::unloadAll();
 }
 

@@ -138,6 +138,26 @@ TEST_CASE("underground points keep their group and floor") {
     CHECK(onFloor == 9);
 }
 
+TEST_CASE("Wooden Mora Chests under the Great Fontaine Lake float on top, the ones in caves keep their floor") {
+    // HoYoLAB's rows of 2026-11-19: 56167 and 56168 float on the lake (opened and seen
+    // in game on 2026-11-25), 47994 is in the Araumi Ruins B2
+    auto loaded = loadFolder(folderWith(129, R"([
+        {"id":56167,"map_id":2,"x_pos":-3696.5,"y_pos":-968.25,"area_id":8,"point_group":{"group_id":90,"floor_id":78}},
+        {"id":56168,"map_id":2,"x_pos":-3800.75,"y_pos":-953,"area_id":8,"point_group":{"group_id":90,"floor_id":78}},
+        {"id":47994,"map_id":2,"x_pos":3658.5,"y_pos":4437.75,"area_id":3,"point_group":{"group_id":64,"floor_id":20}}
+    ])"));
+    REQUIRE(loaded);
+    std::map<int64_t, std::pair<int, int>> floors;
+    for (const auto& point : loaded->points(129)) floors[point.id] = { point.group, point.floor };
+    CHECK(floors == std::map<int64_t, std::pair<int, int>>{ { 56167, { 0, 0 } }, { 56168, { 0, 0 } }, { 47994, { 64, 20 } } });
+    // other types under the lake stay there
+    const ItemCatalog::Point* other = nullptr;
+    for (const auto& point : loaded->points(509))
+        if (point.id == 54044) other = &point;
+    REQUIRE(other);
+    CHECK((other->group == 90 && other->floor == 78));
+}
+
 TEST_CASE("a point by id has its map, type and place") {
     const auto* fish = catalog()->point(23275);
     REQUIRE(fish);

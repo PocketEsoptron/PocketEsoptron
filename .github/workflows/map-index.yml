@@ -1,12 +1,12 @@
 # Builds the map index from HoYoLAB's current map and publishes it on the
 # "map-index" release. The app downloads it instead of ~120 MB of map images.
-# The item files (HoYoLAB's map items as one pack) go on the same release.
-# What is already current isn't uploaded again.
+# The item files (HoYoLAB's map items and the game's tables as one pack) go on
+# the same release. What is already current isn't uploaded again.
 #
 # Every hour a quick check hashes the sources (.github/scripts/map_sources.py)
 # and only the part whose sources changed is built: the index for a map change,
-# the item files for an items or appsample change. Monday's run and a manual
-# run build both.
+# the item files for an items, appsample or game change. Monday's run and a
+# manual run build both.
 
 name: Map index
 
@@ -44,7 +44,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: .github/scripts
+          sparse-checkout: |
+            .github/scripts
+            src/packets
 
       - name: Check the sources
         id: decide
@@ -216,7 +218,11 @@ jobs:
         run: |
           $done = @()
           if ($env:INDEX -eq "success" -and $env:UPLOAD -ne "failure") { $done += "map" }
-          if ($env:ITEMS -eq "success" -and $env:UPLOAD_ITEMS -ne "failure") { $done += "items" }
+          if ($env:ITEMS -eq "success" -and $env:UPLOAD_ITEMS -ne "failure") {
+            $done += "items"
+            # a game table that didn't download is tried again next hour
+            if (-not (Test-Path item_files\game-kept.txt)) { $done += "game" }
+          }
           if ($done.Count -eq 0) { exit 0 }
           # none there yet is a first run, one there that doesn't come fails the step
           gh release download map-index -p map-sources.json -O published.json

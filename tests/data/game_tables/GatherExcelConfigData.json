@@ -1,0 +1,53 @@
+[
+  {
+    "areaId": 999,
+    "gadgetId": 70540003,
+    "itemId": 100001,
+    "pointType": 2006,
+    "refreshId": 999900,
+    "saveType": "GATHER_SAVE_TYPE_LOW",
+    "specialGathering": true
+  },
+  {
+    "areaId": 999,
+    "gadgetId": 70540003,
+    "itemId": 100001,
+    "pointLocation": "POINT_AIR",
+    "pointType": 3001,
+    "refreshId": 999900,
+    "saveType": "GATHER_SAVE_TYPE_LOW",
+    "specialGathering": true
+  },
+  {
+    "areaId": 998,
+    "gadgetId": 70520001,
+    "initDisableInteract": true,
+    "itemId": 101001,
+    "pointType": 1001,
+    "refreshId": 999930,
+    "saveType": "GATHER_SAVE_TYPE_LOW"
+  },
+  {
+    "gadgetId": 70590074,
+    "isForbidGuest": true,
+    "itemId": 107023,
+    "pointType": 4016
+  },
+  {
+    "areaId": 998,
+    "gadgetId": 70520003,
+    "initDisableInteract": true,
+    "itemId": 101003,
+    "pointType": 1003,
+    "refreshId": 999932,
+    "saveType": "GATHER_SAVE_TYPE_HIGH"
+  },
+  {
+    "areaId": 6,
+    "gadgetId": 70540076,
+    "itemId": 101249,
+    "pointType": 2078,
+    "saveType": "GATHER_SAVE_TYPE_OWN",
+    "specialGathering": true
+  }
+]

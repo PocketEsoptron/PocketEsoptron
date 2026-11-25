@@ -115,6 +115,7 @@ namespace LuaFunctions {
     sol::object GetMapGrid(int mapId, sol::this_state state);
     GLuint GetMapTile(int mapId, int x, int y, int size);
     sol::table GetItems(sol::this_state state);
+    void CheckForMapItems();
     sol::object GetItemTypes(sol::this_state state);
     sol::object GetItemPositions(int type, sol::this_state state);
     sol::object GetItemRegions(sol::this_state state);
@@ -133,6 +134,31 @@ namespace LuaFunctions {
     // at a Unix second. The trigger's changed is "server" or "reset" (a
     // new game day).
     sol::object gameServerTable(const std::string& key, int64_t now, sol::state_view lua);
+    // GetFinds(after), with Map info: the map items the player did while the
+    // overlay read the game's traffic, the newest 256 of the run after the id
+    // given (all of them without one), oldest first. Each { id, how, type, map,
+    // x, y, object } and point, or when it can't tell which: maybe, the ones it
+    // can be, nearest first, rivals, the objects about as near whose map item
+    // it may be instead, and maybe_none = true when it may be none of them, as
+    // its floor isn't known. how is opened, picked_up, solved, used (a
+    // viewpoint looked from) or back. object is the game's object as
+    // "group/config", "" for a puzzle. A pickup also has item, the game's item
+    // got, and back_at when it grows back (Unix seconds);
+    // one that grows back by the server's clock isn't found while no server is
+    // picked, and is left out for an extension without Game server, as its time
+    // would tell the server. A back find is an object waiting to grow back seen
+    // again, so back before its time: object, type and where, no point. Ids go
+    // up, also from one run to the next. The Finds trigger's changed is "new".
+    sol::table GetFinds(sol::optional<uint64_t> after, sol::this_state state);
+    // SetFindsDone(done, growing), with Map info: the point ids the extension has
+    // as done, and what waits to grow back, each { object, points, back_at } as
+    // GetFinds gave it (object may be missing). The finds pass over what's done,
+    // and a waiting object seen again comes as a back find. With more than one
+    // extension only the points all of them have count. Called again it replaces
+    // what it gave before.
+    void SetFindsDone(sol::table done, sol::optional<sol::table> growing);
+    void forgetFinds(Extensions::Extension* owner);
+    sol::table findsTable(uint64_t after, sol::state_view lua);
     // GetAccount("hoyolab_map" or "appsample"): { site, state, problem, account }.
     // state is logged_out, window_open, logged_in, needs_login or captcha,
     // problem what went wrong last for the player, "" when nothing did.
@@ -188,7 +214,8 @@ namespace LuaFunctions {
     // DrawBadge(x, y, radius, icon, { ring = color, faded = true }): a round
     // badge like the game's map icons, the icon a texture of its own or 0
     void DrawBadge(float x, float y, float radius, sol::optional<GLuint> icon, sol::optional<sol::table> options);
-    // DrawBubble(x, y, radius, text, { color }): a small bubble with a count or a sign
+    // DrawBubble(x, y, radius, text, { color, sign = "clock" }): a small bubble with
+    // a count or a sign, or a clock in it for something that comes back later
     void DrawBubble(float x, float y, float radius, const std::string& text, sol::optional<sol::table> options);
     std::tuple<bool, bool> ClickArea(float x0, float y0, float x1, float y1);
     void PushClipRect(float x0, float y0, float x1, float y1);
@@ -278,7 +305,9 @@ namespace LuaFunctions {
     // PermissionState gives "allowed", "not_asked", "refused" (this start),
     // "never" (Never ask again) or "off" (switched off on its Permissions
     // tab), nil for a name nothing has. AskForPermission queues the question,
-    // it shows while the map or menu is open.
+    // it shows while the map or menu is open. A "refused" is asked again only
+    // from a button's or key's function, or right after the player flips one
+    // of its switches.
     sol::object PermissionState(const std::string& name, sol::this_state state);
     void AskForPermission(const std::string& name);
     // OpenPermissions(name): its Permissions tab, from its menu only; with a

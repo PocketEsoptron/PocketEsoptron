@@ -117,16 +117,16 @@ for _, site in ipairs(sync.SITES) do now[site] = { dirty = {}, syncedFor = nil, 
 sync.now = now
 
 -- a point changed here: every other site with sync on sends it. dirty says
--- where it came from: "tap" for the player's own, "bulk" for a file, a Get
--- or the other site's sync
-collected.onChange = function(id, on, from)
+-- where it came from: "tap" for the player's own, "bulk" for a file, a Get,
+-- the overlay's finds or the other site's sync
+collected.listen(function(id, on, from)
     for _, site in ipairs(sync.SITES) do
         if from ~= site and saved[site] and saved[site].on then
             now[site].dirty[id] = from == "tap" and "tap" or "bulk"
             now[site].changedAt = GetOSTimeMS()
         end
     end
-end
+end)
 
 local function account(site)
     local a = GetAccount(site)

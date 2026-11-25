@@ -2957,6 +2957,17 @@ namespace Controls {
         draw->AddText(ImGui::GetFont(), size, ImVec2(center.x - measured.x / 2, center.y - measured.y / 2), Color(0x1C2030FF), text);
     }
 
+    void ClockBubble(ImDrawList* draw, ImVec2 center, float radius, std::optional<unsigned int> fill) {
+        if (radius <= 0) return;
+        Bubble(draw, center, radius, nullptr, fill);
+        ImU32 ink = Color(0x1C2030FF);
+        float thick = std::max(1.0f, radius * 0.14f);
+        draw->AddCircle(center, radius * 0.56f, ink, 0, thick);
+        // the hands at three o'clock
+        draw->AddLine(center, ImVec2(center.x, center.y - radius * 0.38f), ink, thick);
+        draw->AddLine(center, ImVec2(center.x + radius * 0.28f, center.y), ink, thick);
+    }
+
     // UTF-8: where the character after the one at at starts, and where the last one starts
     static size_t nextChar(const std::string& text, size_t at) {
         at++;

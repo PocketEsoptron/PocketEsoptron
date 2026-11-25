@@ -1,0 +1,7 @@
+[
+{"id":99019,"map_id":2,"x_pos":-4699.875618084701,"y_pos":-2050.125756646521,"area_id":8,"point_group":null,"appsample":99631,"appsample_level":5},
+{"id":54197,"map_id":2,"x_pos":-4700.25,"y_pos":-2533.5,"area_id":8,"point_group":null,"appsample":55442,"appsample_level":5},
+{"id":54157,"map_id":2,"x_pos":-4387.25,"y_pos":-2097.25,"area_id":8,"point_group":null,"appsample":55447,"appsample_level":5},
+{"id":54154,"map_id":2,"x_pos":-4720.5,"y_pos":-1987.75,"area_id":8,"point_group":null,"appsample":55448,"appsample_level":5},
+{"id":54143,"map_id":2,"x_pos":-5317.25,"y_pos":-2139.25,"area_id":8,"point_group":{"group_id":20,"floor_id":112},"appsample":55450,"appsample_level":5}
+]

@@ -9,6 +9,7 @@ metadata = {
         network = { reason = "For the comments: the marker's picture, text and appsample's comments." },
         hoyolab_map_account = { reason = "To keep what you collected the same as your marks on HoYoLAB Map." },
         appsample_account = { reason = "To keep what you collected the same as your marks on appsample." },
+        game_server = { reason = "Some plants and ores come back at the server's daily reset, so it knows when to unmark them." },
     },
 }
 
@@ -16,6 +17,7 @@ local catalog = require("catalog")
 local selection = require("selection")
 local collected = require("collected")
 local sync = require("sync")
+local finds = require("finds")
 local collectedPage = require("collectedpage")
 local map = require("map")
 local bar = require("bar")
@@ -28,6 +30,7 @@ function RegisterSettings()
     DefineExtensionSetting("minimapScale", "Marker size on the minimap (%)", "int", 100, 20, 200)
     DefineExtensionSetting("hideCollectedMap", "Hide collected ones on the map", "bool", false)
     DefineExtensionSetting("hideCollectedMinimap", "Hide collected ones on the minimap", "bool", true)
+    DefineExtensionSetting("hideGrowingBack", "Hide collected ones that grow back too", "bool", false)
     DefineExtensionSetting("hideOtherLayers", "Hide markers on other floors", "bool", false)
     DefineExtensionSetting("mapBar", "Show the picked types as a bar on the map", "bool", true)
     DefineExtensionSetting("mergeClose", "Merge markers that overlap into one with a count", "bool", false)
@@ -39,15 +42,20 @@ function Init()
     selection.load()
     collected.load()
     sync.load()
+    finds.load()
+    finds.update()
     AddTrigger("Account", function(_, site)
         sync.accountChanged(site)
         collectedPage.accountChanged(site)
     end)
+    AddTrigger("Items", function() catalog.readAuto() end, "auto")
+    AddTrigger("Finds", function() finds.update() end)
 end
 
 local asked = false
 
 function Update()
+    finds.tick()
     if catalog.update() then
         guide.close()
         selection.ready()

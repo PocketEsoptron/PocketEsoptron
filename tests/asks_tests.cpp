@@ -837,3 +837,19 @@ TEST_CASE("a trigger added without its permission asks for it") {
     Asks::clear();
     TestExtension::unloadAll();
 }
+
+TEST_CASE("Don't turn on holds, the player's own press asks again", "[asks]") {
+    Fresh fresh;
+    bool on = false;
+    Asks::addSetting({ "Test setting", "Do the test thing", "It only tests.", [&]() { return on; }, [&]() { on = true; } });
+    Bare a("a");
+    Asks::askSetting(a.ext, "Test setting");
+    Asks::answer(Answer::DontAllow);
+    CHECK(Asks::settingState(a.ext, "Test setting") == "refused");
+    Asks::askSetting(a.ext, "Test setting");
+    CHECK(Asks::queue().empty());
+    a.ext.playerAction++;
+    Asks::askSetting(a.ext, "Test setting");
+    a.ext.playerAction--;
+    CHECK(Asks::queue().size() == 1);
+}

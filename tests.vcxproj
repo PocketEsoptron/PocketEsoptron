@@ -156,6 +156,8 @@
     <ClCompile Include="src\helpers.cpp" />
     <ClCompile Include="src\taskbar.cpp" />
     <ClCompile Include="src\item_catalog.cpp" />
+    <ClCompile Include="src\game_tables.cpp" />
+    <ClCompile Include="src\regrow.cpp" />
     <ClCompile Include="src\item_icons.cpp" />
     <ClCompile Include="src\item_files.cpp" />
     <ClCompile Include="src\item_patch.cpp" />
@@ -171,6 +173,7 @@
     <ClCompile Include="src\map_follow.cpp" />
     <ClCompile Include="src\map_tiles.cpp" />
     <ClCompile Include="src\map_tracking.cpp" />
+    <ClCompile Include="src\marker_index.cpp" />
     <ClCompile Include="src\minimap.cpp" />
     <ClCompile Include="src\net.cpp" />
     <ClCompile Include="src\npcap_download.cpp" />
@@ -182,6 +185,14 @@
     <ClCompile Include="src\game_traffic_text.cpp" />
     <ClCompile Include="src\packets\game_traffic.cpp" />
     <ClCompile Include="src\packets\kcp.cpp" />
+    <ClCompile Include="src\packets\learner.cpp" />
+    <ClCompile Include="src\packets\learning.cpp" />
+    <ClCompile Include="src\packets\world.cpp" />
+    <ClCompile Include="src\packets\floors.cpp" />
+    <ClCompile Include="src\packets\links.cpp" />
+    <ClCompile Include="src\packets\puzzles.cpp" />
+    <ClCompile Include="src\packets\finds.cpp" />
+    <ClCompile Include="src\packets\scene.cpp" />
     <ClCompile Include="src\packets\messages.cpp" />
     <ClCompile Include="src\packets\packet_capture.cpp" />
     <ClCompile Include="src\packets\reader.cpp" />
@@ -213,6 +224,7 @@
     <ClCompile Include="tests\item_lua_tests.cpp" />
     <ClCompile Include="tests\marks_tests.cpp" />
     <ClCompile Include="tests\markers_sets_tests.cpp" />
+    <ClCompile Include="tests\markers_finds_tests.cpp" />
     <ClCompile Include="tests\markers_sync_tests.cpp" />
     <ClCompile Include="tests\menu_summary_tests.cpp" />
     <ClCompile Include="tests\page_order_tests.cpp" />
@@ -222,6 +234,14 @@
     <ClCompile Include="tests\key_choices_tests.cpp" />
     <ClCompile Include="tests\keybindings_tests.cpp" />
     <ClCompile Include="tests\layer_choice_tests.cpp" />
+    <ClCompile Include="tests\learner_tests.cpp" />
+    <ClCompile Include="tests\world_tests.cpp" />
+    <ClCompile Include="tests\floors_tests.cpp" />
+    <ClCompile Include="tests\marker_index_tests.cpp" />
+    <ClCompile Include="tests\links_tests.cpp" />
+    <ClCompile Include="tests\finds_tests.cpp" />
+    <ClCompile Include="tests\game_tables_tests.cpp" />
+    <ClCompile Include="tests\regrow_tests.cpp" />
     <ClCompile Include="tests\lua_functions_tests.cpp" />
     <ClCompile Include="tests\lua_patterns_tests.cpp" />
     <ClCompile Include="tests\lit_floor_tests.cpp" />
@@ -257,6 +277,9 @@
     <ClInclude Include="src\files.hpp" />
     <ClInclude Include="src\file_dialogs.hpp" />
     <ClInclude Include="src\item_catalog.hpp" />
+    <ClInclude Include="src\game_tables.hpp" />
+    <ClInclude Include="src\regrow.hpp" />
+    <ClInclude Include="src\marker_index.hpp" />
     <ClInclude Include="src\item_icons.hpp" />
     <ClInclude Include="src\item_files.hpp" />
     <ClInclude Include="src\item_patch.hpp" />
@@ -287,6 +310,14 @@
     <ClInclude Include="src\update_check.hpp" />
     <ClInclude Include="src\packets\game_traffic.hpp" />
     <ClInclude Include="src\packets\kcp.hpp" />
+    <ClInclude Include="src\packets\learner.hpp" />
+    <ClInclude Include="src\packets\learning.hpp" />
+    <ClInclude Include="src\packets\world.hpp" />
+    <ClInclude Include="src\packets\floors.hpp" />
+    <ClInclude Include="src\packets\links.hpp" />
+    <ClInclude Include="src\packets\puzzles.hpp" />
+    <ClInclude Include="src\packets\finds.hpp" />
+    <ClInclude Include="src\packets\scene.hpp" />
     <ClInclude Include="src\packets\messages.hpp" />
     <ClInclude Include="src\packets\packet_capture.hpp" />
     <ClInclude Include="src\packets\reader.hpp" />
@@ -302,6 +333,8 @@
     <ClInclude Include="tests\test_extension.hpp" />
     <ClInclude Include="tests\test_map.hpp" />
     <ClInclude Include="tests\map_screen.hpp" />
+    <ClInclude Include="tests\recorded_messages.hpp" />
+    <ClInclude Include="tests\installed_pack.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -11,6 +11,8 @@ namespace Messages {
     struct Message {
         uint16_t id = 0;
         Frames::Direction direction = Frames::Direction::Received;
+        // when it was caught, unix ms (the reader sets it, Open doesn't)
+        uint64_t ms = 0;
         // PacketHead and the message itself, both protobuf
         std::string head;
         std::string body;

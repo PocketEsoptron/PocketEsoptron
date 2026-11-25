@@ -8,7 +8,7 @@ local catalog = {}
 catalog.CELL = 256
 
 catalog.version = 0
-catalog.groups = {}     -- { id, name, types = { { id, name, total } } }
+catalog.groups = {}     -- { id, name, types = { { id, name, total, auto } } }
 catalog.types = {}      -- every type in menu order
 catalog.typeOf = {}     -- type id -> type
 catalog.regions = {}    -- { id, name, map, left, top, right, bottom }
@@ -65,7 +65,7 @@ local function read()
             local total = 0
             for _, n in pairs(kind.counts) do total = total + n end
             if total > 0 then
-                local entry = { id = kind.id, name = kind.name, total = total, group = group.id }
+                local entry = { id = kind.id, name = kind.name, total = total, group = group.id, auto = kind.auto == true }
                 types[#types + 1] = entry
                 catalog.types[#catalog.types + 1] = entry
                 catalog.typeOf[kind.id] = entry
@@ -106,6 +106,16 @@ function catalog.update()
     catalog.version = version
     read()
     return true
+end
+
+-- which types the overlay finds done by itself, read again when that changes
+function catalog.readAuto()
+    for _, group in ipairs(GetItemTypes() or {}) do
+        for _, kind in ipairs(group.types) do
+            local entry = catalog.typeOf[kind.id]
+            if entry then entry.auto = kind.auto == true end
+        end
+    end
 end
 
 local function load(typeId)

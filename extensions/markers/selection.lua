@@ -8,6 +8,7 @@
 
 local catalog = require("catalog")
 local collected = require("collected")
+local finds = require("finds")
 
 local selection = {}
 
@@ -306,7 +307,8 @@ function selection.otherLayer(point, groupId, floorId)
 end
 
 -- What visible() goes by, read once a frame: the layer showing, the regions,
--- that place's "hide collected" setting, and keep, a point id that always
+-- that place's "hide collected" setting (ones that grow back have their own),
+-- and keep, a point id that always
 -- shows (the one whose guide is open).
 function selection.rules(mapId, x, y, groupId, floorId, hideCollected, keep)
     return {
@@ -314,6 +316,7 @@ function selection.rules(mapId, x, y, groupId, floorId, hideCollected, keep)
         groupId = groupId,
         floorId = floorId,
         hideCollected = hideCollected,
+        hideGrowing = GetSetting("hideGrowingBack"),
         hideOther = GetSetting("hideOtherLayers"),
         keep = keep,
     }
@@ -332,7 +335,8 @@ end
 function selection.visible(point, rules)
     if point.id == rules.keep then return true end
     if rules.filter and not rules.filter[point.area] then return false end
-    if rules.hideCollected and collected.has(point.id) then return false end
+    if rules.hideCollected and collected.has(point.id)
+        and (rules.hideGrowing or not finds.backAt(point.id)) then return false end
     if rules.hideOther and selection.otherLayer(point, rules.groupId, rules.floorId) then return false end
     return true
 end

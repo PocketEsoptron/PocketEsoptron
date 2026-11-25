@@ -5,6 +5,7 @@ local catalog = require("catalog")
 local selection = require("selection")
 local collected = require("collected")
 local map = require("map")
+local finds = require("finds")
 
 local minimap = {}
 
@@ -42,8 +43,13 @@ function minimap.draw(player)
                             local done = collected.has(point.id)
                             local look = other and layerLook[done][selection.layerArrow(point, player.groupId, player.floorId)]
                                 or done and fadedLook or plainLook
-                            DrawBadge(player.centerX + dx, player.centerY + dy, other and half * map.OTHER_LAYER or half,
-                                catalog.icon(point.type), look)
+                            local shown = other and half * map.OTHER_LAYER or half
+                            DrawBadge(player.centerX + dx, player.centerY + dy, shown, catalog.icon(point.type), look)
+                            if not done and finds.maybe[point.id] then
+                                map.drawBubble(player.centerX + dx, player.centerY + dy, shown, "?")
+                            elseif done and finds.backAt(point.id) then
+                                map.drawBubble(player.centerX + dx, player.centerY + dy, shown, "", map.CLOCK)
+                            end
                         end
                     end
                 end

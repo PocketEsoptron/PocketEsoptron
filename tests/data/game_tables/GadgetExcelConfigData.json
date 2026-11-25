@@ -1,0 +1,48 @@
+[
+  {
+    "campID": 1001,
+    "id": 40200002,
+    "interactNameTextMapHash": 2202542368,
+    "itemJsonName": "Default_Item",
+    "nameTextMapHash": 3178741789,
+    "prefabPathHash": 11857374781897784333,
+    "tags": [
+      "item"
+    ],
+    "type": "AirflowField",
+    "LPBEDCGEPAO": true
+  },
+  {
+    "campID": 5001,
+    "clientScriptHash": 17704237250353969899,
+    "hasAudio": true,
+    "id": 70211101,
+    "inteeIconName": "UI_Icon_Intee_TreasureBox",
+    "interactNameTextMapHash": 1425570902,
+    "jsonName": "SceneObj_Chest_Default_Lv1",
+    "lodPatternName": "Gadget_Special_Middle_01",
+    "nameTextMapHash": 2520541625,
+    "prefabPathHash": 9369216648140419652,
+    "type": "Chest",
+    "AEJOIFBFFLF": true,
+    "AIJCFGPIPDD": true,
+    "CANGAJIPNAH": true,
+    "LPBEDCGEPAO": true
+  },
+  {
+    "campID": 1001,
+    "id": 70540003,
+    "interactNameTextMapHash": 2675898398,
+    "itemJsonName": "SceneObj_Item_Small",
+    "jsonName": "SceneObj_Gather_Small",
+    "landSoundID": 6,
+    "nameTextMapHash": 2376682825,
+    "prefabPathHash": 3033902231498953966,
+    "tags": [
+      "item"
+    ],
+    "type": "GatherObject",
+    "AIJCFGPIPDD": true,
+    "LPBEDCGEPAO": true
+  }
+]

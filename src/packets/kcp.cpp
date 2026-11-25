@@ -73,7 +73,7 @@ namespace Kcp {
         check(m_sent, ms);
         check(m_received, ms);
         if (!m_broken)
-            take(stream, direction, out);
+            take(stream, direction, ms, out);
     }
 
     void Reader::push(Stream& stream, uint32_t sn, uint8_t frg, std::string data) {
@@ -103,7 +103,7 @@ namespace Kcp {
             m_broken = true;
     }
 
-    void Reader::take(Stream& stream, Frames::Direction direction, std::vector<Message>& out) {
+    void Reader::take(Stream& stream, Frames::Direction direction, uint64_t ms, std::vector<Message>& out) {
         for (;;) {
             while (!stream.waiting.empty() && stream.waiting.begin()->first == stream.next) {
                 stream.ready.push_back(std::move(stream.waiting.begin()->second));
@@ -124,6 +124,7 @@ namespace Kcp {
             }
             Message message;
             message.direction = direction;
+            message.ms = ms;
             for (size_t k = 0; k < count; k++) {
                 message.data += stream.ready.front().second;
                 stream.ready.pop_front();

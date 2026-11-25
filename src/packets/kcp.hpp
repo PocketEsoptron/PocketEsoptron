@@ -17,6 +17,8 @@ namespace Kcp {
     struct Message {
         Frames::Direction direction = Frames::Direction::Received;
         std::string data;
+        // when its last part was caught, unix ms
+        uint64_t ms = 0;
     };
 
     class Reader {
@@ -43,7 +45,7 @@ namespace Kcp {
         };
 
         void push(Stream& stream, uint32_t sn, uint8_t frg, std::string data);
-        void take(Stream& stream, Frames::Direction direction, std::vector<Message>& out);
+        void take(Stream& stream, Frames::Direction direction, uint64_t ms, std::vector<Message>& out);
         void check(Stream& stream, uint64_t ms);
 
         bool m_fromStart = false;

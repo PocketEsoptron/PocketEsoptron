@@ -1,0 +1,11 @@
+[
+{"id":54035,"map_id":2,"x_pos":-4711.25,"y_pos":-1928.5,"area_id":8,"point_group":{"group_id":104,"floor_id":123},"appsample":54968,"appsample_level":6},
+{"id":54032,"map_id":2,"x_pos":-4381,"y_pos":-2295.25,"area_id":8,"point_group":null,"appsample":54971,"appsample_level":6},
+{"id":54031,"map_id":2,"x_pos":-4670.5,"y_pos":-2396.25,"area_id":8,"point_group":null,"appsample":54972,"appsample_level":6},
+{"id":54029,"map_id":2,"x_pos":-4965.5,"y_pos":-2680.25,"area_id":8,"point_group":null,"appsample":54974,"appsample_level":6},
+{"id":47000,"map_id":2,"x_pos":-6853,"y_pos":1587.25,"area_id":4,"point_group":null,"appsample":47465,"appsample_level":6},
+{"id":46990,"map_id":2,"x_pos":-6763,"y_pos":1902.75,"area_id":4,"point_group":{"group_id":72,"floor_id":105},"appsample":47475,"appsample_level":6},
+{"id":28788,"map_id":2,"x_pos":-4222.5,"y_pos":2568.5,"area_id":4,"point_group":null,"appsample":32709,"appsample_level":6},
+{"id":28784,"map_id":2,"x_pos":-3553,"y_pos":2705.25,"area_id":4,"point_group":null,"appsample":32713,"appsample_level":6},
+{"id":6432,"map_id":2,"x_pos":76,"y_pos":1284,"area_id":1,"point_group":null,"appsample":9955,"appsample_level":6}
+]

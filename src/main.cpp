@@ -22,7 +22,10 @@
 #include "map_tracking.hpp"
 #include "minimap.hpp"
 #include "locator/map_locator.hpp"
+#include "packets/finds.hpp"
 #include "packets/game_traffic.hpp"
+#include "packets/learning.hpp"
+#include "packets/world.hpp"
 #include "point_guides.hpp"
 #include "accounts.hpp"
 #include "marks.hpp"
@@ -285,12 +288,23 @@ int main(int argc, char** argv) {
     if (Settings::checkUpdates) UpdateCheck::Start();
     else UpdateCheck::Stop();
 
+    // what grew back by the overlay's own finds comes off without a question
+    Marks::SetGrownBack({ Finds::AllGrownBack, Finds::Unmarked });
     Marks::Init();
     MapTracking::Start(Helpers::dataDirectory() / "map_data");
     ItemFiles::Start(Helpers::dataDirectory() / "items", Settings::downloadItems);
     MapTiles::Init(Helpers::dataDirectory() / "map_data");
     MapCheck::Start(Helpers::dataDirectory() / "map_data");
     MiniMap::Start(Helpers::dataDirectory() / "map_data");
+    Learning::Start(Helpers::dataDirectory());
+    World::Start();
+    Finds::Start(Helpers::dataDirectory(), [](int& map, int& group, int& floor) {
+        MiniMap::Spot spot = MiniMap::Watch();
+        map = spot.mapId;
+        group = spot.groupId;
+        floor = spot.floorId;
+        return spot.found;
+    });
     // off until the player turns it on in the menu
     if (Settings::readGameTraffic) GameTraffic::Start();
     Extensions::initExtensions();
@@ -302,6 +316,9 @@ int main(int argc, char** argv) {
     ItemFiles::AskToStop();
     ScreenPictures::stop();
     GameTraffic::Stop();
+    Finds::Stop();
+    World::Stop();
+    Learning::Stop();
     // first, it grabs the game and asks the map matching, which the tracker closes
     MiniMap::Stop();
     MapTracking::Stop();

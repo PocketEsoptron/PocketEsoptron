@@ -14,6 +14,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <nlohmann/json.hpp>
+#include "asks.hpp"
 #include "controls.hpp"
 #include "extensions.hpp"
 #include "notices.hpp"
@@ -171,6 +172,7 @@ TEST_CASE("every function an extension gets goes through the permission check") 
     CHECK(needs("RegisterKeybind") == Permission::None);
     CHECK(needs("DrawText") == Permission::DisplayOverlay);
     CHECK(needs("GetItemTypes") == Permission::MapInfo);
+    CHECK(needs("GetFinds") == Permission::MapInfo);
     CHECK(needs("CompareImages") == Permission::None);
     CHECK(needs("ReadFile") == Permission::InternalReadfile);
     CHECK(needs("WriteFile") == Permission::InternalWritefile);
@@ -2132,4 +2134,81 @@ TEST_CASE("the bundled map and minimap run with no map open") {
         CHECK(ext->lastError.empty());
         TestExtension::unloadAll();
     }
+}
+
+TEST_CASE("a press on an extension's button asks again for a setting refused this start") {
+    Asks::clear();
+    bool on = false;
+    Asks::addSetting({ "Pressed setting", "Do the pressed thing", "It only tests.", [&]() { return on; }, [&]() { on = true; } });
+    Extensions::Extension* ext = drawing("press_asks");
+    REQUIRE(ext != nullptr);
+    Frame frame;
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigInputTrickleEventQueue = false;
+    ImVec2 middle;
+    auto draw = [&] {
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2(300, 300));
+        ImGui::Begin("Pocket Esoptron");
+        {
+            Extensions::InPhase menu(Extensions::Phase::Menu);
+            REQUIRE(TestExtension::run(ext, R"(ImGUI_Button("Turn it on", function() AskForPermission("Pressed setting") end))"));
+        }
+        ImVec2 a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
+        middle = ImVec2((a.x + b.x) / 2, (a.y + b.y) / 2);
+        ImGui::End();
+    };
+    auto next = [&](bool down) {
+        ImGui::EndFrame();
+        io.AddMousePosEvent(middle.x, middle.y);
+        io.AddMouseButtonEvent(ImGuiMouseButton_Left, down);
+        ImGui::NewFrame();
+    };
+
+    REQUIRE(TestExtension::run(ext, R"(AskForPermission("Pressed setting"))"));
+    REQUIRE(Asks::queue().size() == 1);
+    Asks::answer(Asks::Answer::DontAllow);
+    REQUIRE(Asks::settingState(*ext, "Pressed setting") == "refused");
+    // not pressed: it doesn't ask
+    REQUIRE(TestExtension::run(ext, R"(AskForPermission("Pressed setting"))"));
+    CHECK(Asks::queue().empty());
+
+    draw();
+    next(false);
+    draw();
+    next(true);
+    draw();
+    next(false);
+    draw();
+    CHECK(Asks::queue().size() == 1);
+
+    // a switch the player flips counts the same, what it asks right after is asked again
+    Asks::answer(Asks::Answer::DontAllow);
+    REQUIRE(Asks::settingState(*ext, "Pressed setting") == "refused");
+    auto flip = [&] {
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2(300, 300));
+        ImGui::Begin("Pocket Esoptron");
+        {
+            Extensions::InPhase menu(Extensions::Phase::Menu);
+            REQUIRE(TestExtension::run(ext, R"(
+                local on = ImGUI_Toggle("Switch it", _G.on == true)
+                if on ~= (_G.on == true) then _G.on = on; if on then AskForPermission("Pressed setting") end end)"));
+        }
+        // the switch's track, at the row's end
+        ImVec2 a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
+        middle = ImVec2((a.x + b.x) / 2, (a.y + b.y) / 2);
+        ImGui::End();
+    };
+    flip();
+    next(false);
+    flip();
+    next(true);
+    flip();
+    next(false);
+    flip();
+    CHECK((*ext->luaState)["on"].get_or(false));
+    CHECK(Asks::queue().size() == 1);
+    TestExtension::unloadAll();
+    Asks::clear();
 }

@@ -5,6 +5,7 @@
 local catalog = require("catalog")
 local selection = require("selection")
 local collected = require("collected")
+local finds = require("finds")
 local guide = require("guide")
 
 local map = {}
@@ -121,15 +122,20 @@ end
 -- and the collected look aren't part of it, they're looked up when drawn.
 local merged = { key = nil, bySize = {} }
 
+-- the back times change what's hidden only while collected ones are hidden and growing ones aren't
+local function growingKey(rules)
+    return rules.hideCollected and not rules.hideGrowing and finds.backVersion or 0
+end
+
 local function bucketsFor(view, rules, size)
     local key = table.concat({ view.mapId, selection.version, selection.whereVersion, rules.groupId, rules.floorId, tostring(rules.hideOther),
-        tostring(rules.hideCollected), rules.hideCollected and collected.version or 0 }, ":")
+        tostring(rules.hideCollected), tostring(rules.hideGrowing), rules.hideCollected and collected.version or 0, growingKey(rules) }, ":")
     if merged.key ~= key then merged.key, merged.bySize = key, {} end
     local kept = merged.bySize[size]
     if kept then return kept end
     -- what's hidden here is only its rule, the open guide's point is drawn on its own
     local plain = { filter = rules.filter, groupId = rules.groupId, floorId = rules.floorId,
-        hideCollected = rules.hideCollected, hideOther = rules.hideOther }
+        hideCollected = rules.hideCollected, hideGrowing = rules.hideGrowing, hideOther = rules.hideOther }
     -- every visible point with its type, in a grid a badge wide to find neighbours
     local points, typeOf, near = {}, {}, {}
     for _, typeId in ipairs(selection.shownTypes()) do
@@ -237,16 +243,55 @@ local layerLook = {
 -- a badge on another layer, part of the size of one on the layer showing
 map.OTHER_LAYER = 0.75
 
+-- a bubble on a badge's corner: a count, "?" on one a find may be, or a clock
+-- on one waiting to grow back
+map.CLOCK = { sign = "clock" }
+function map.drawBubble(x, y, half, text, options)
+    DrawBubble(x + half * 0.72, y - half * 0.72, half * 0.42, text, options)
+end
+
+-- "Back in 1 d 7 h" for a tick that comes off by itself at, nil for one that doesn't
+function map.backText(at)
+    if not at then return nil end
+    local left = at - math.floor(GetOSTimeMS() / 1000)
+    if left < 60 then return "Back in less than a minute" end
+    local minutes = math.floor(left / 60)
+    local hours, days = math.floor(minutes / 60), math.floor(minutes / 1440)
+    if days > 0 then
+        local h = hours - days * 24
+        return "Back in " .. days .. " d" .. (h > 0 and " " .. h .. " h" or "")
+    end
+    if hours > 0 then
+        local m = minutes - hours * 60
+        return "Back in " .. hours .. " h" .. (m > 0 and " " .. m .. " min" or "")
+    end
+    return "Back in " .. minutes .. " min"
+end
+
 -- arrow: "up" or "down" for a point on another layer
 local function drawBadge(x, y, half, point, typeId, isCollected, arrow, open)
     local look = open and openLook or arrow and layerLook[isCollected][arrow] or isCollected and fadedLook or plainLook
     if open then openLook.layer = arrow end
     if arrow then half = half * map.OTHER_LAYER end
     DrawBadge(x, y, half, catalog.icon(typeId), look)
+    if point and not isCollected and finds.maybe[point.id] then map.drawBubble(x, y, half, "?") end
+    if point and isCollected and finds.backAt(point.id) then map.drawBubble(x, y, half, "", map.CLOCK) end
+end
+
+-- the time left under a badge waiting to grow back while the mouse is on it
+local function drawBackLabel(x, y, half, point)
+    local label = map.backText(finds.backAt(point.id))
+    if not label then return end
+    local theme = GetTheme()
+    local size = theme.font * 1.2
+    local w, h = TextSize(label, size)
+    local lx, ly = x - w / 2, y + half + 8
+    DrawRect(lx - 8, ly - 5, lx + w + 8, ly + h + 5, theme.panel, { rounding = 6 })
+    DrawText(label, lx, ly, size, theme.text)
 end
 
 local function drawCount(x, y, half, count)
-    DrawBubble(x + half * 0.72, y - half * 0.72, half * 0.42, count > 999 and "999+" or tostring(count))
+    map.drawBubble(x, y, half, count > 999 and "999+" or tostring(count))
 end
 
 -- only the middle of a badge takes taps, so the map can still be dragged from
@@ -283,7 +328,7 @@ local function drawMerged(view, rules, half, tapHalf, mouseX, mouseY)
                 local x, y = shownBuckets.x[i], shownBuckets.y[i]
                 local arrow = bucket.other and selection.layerArrow(bucket.stack[1], rules.groupId, rules.floorId)
                 local shrink = arrow and map.OTHER_LAYER or 1
-                drawBadge(x, y, half, nil, bucket.type, allCollected(bucket), arrow, false)
+                drawBadge(x, y, half, #bucket.stack == 1 and bucket.stack[1] or nil, bucket.type, allCollected(bucket), arrow, false)
                 if #bucket.stack > 1 then drawCount(x, y, half * shrink, #bucket.stack) end
                 if tapped(x, y, tapHalf and tapHalf * shrink, mouseX, mouseY) then tappedBucket = bucket end
             end
@@ -302,7 +347,7 @@ end
 
 local function drawEach(view, rules, half, tapHalf, mouseX, mouseY)
     local n = onScreen.n
-    local tappedAt, openAt
+    local tappedAt, openAt, hoverAt
     for _, faint in ipairs({ true, false }) do
         for i = 1, n do
             local point = onScreen.point[i]
@@ -314,6 +359,10 @@ local function drawEach(view, rules, half, tapHalf, mouseX, mouseY)
                 drawBadge(x, y, half, point, point.type, collected.has(point.id), arrow, false)
                 local tapAt = tapHalf and (arrow and tapHalf * map.OTHER_LAYER or tapHalf)
                 if tapped(x, y, tapAt, mouseX, mouseY) then tappedAt = i end
+                local reach = arrow and half * map.OTHER_LAYER or half
+                if mouseX and math.abs(mouseX - x) <= reach and math.abs(mouseY - y) <= reach and finds.backAt(point.id) then
+                    hoverAt = i
+                end
             end
         end
     end
@@ -323,6 +372,7 @@ local function drawEach(view, rules, half, tapHalf, mouseX, mouseY)
         drawBadge(onScreen.x[openAt], onScreen.y[openAt], half, point, point.type, collected.has(point.id),
             selection.layerArrow(point, rules.groupId, rules.floorId), true)
     end
+    if hoverAt then drawBackLabel(onScreen.x[hoverAt], onScreen.y[hoverAt], half, onScreen.point[hoverAt]) end
     -- a tap takes every one that overlaps the tapped one, at the size each is drawn
     if tappedAt then
         local function drawnHalf(point)
@@ -361,12 +411,12 @@ function map.draw(view)
         end
         local key = table.concat({ view.mapId, view.lat, view.lng, view.unitsPerPixel, view.groupId, view.floorId,
             view.left, view.top, view.right, view.bottom, table.concat(ui, ";"), half, selection.version, selection.whereVersion,
-            rules.hideCollected and collected.version or 0, tostring(rules.keep), tostring(rules.hideOther) }, ":")
+            rules.hideCollected and collected.version or 0, tostring(rules.hideGrowing), growingKey(rules), tostring(rules.keep), tostring(rules.hideOther) }, ":")
         if key ~= collectedKey then
             collectedKey = key
             -- what the points around were picked by, all but where the map is
             local aroundKey = table.concat({ view.mapId, view.groupId, view.floorId,
-                selection.version, selection.whereVersion, rules.hideCollected and collected.version or 0, tostring(rules.keep),
+                selection.version, selection.whereVersion, rules.hideCollected and collected.version or 0, tostring(rules.hideGrowing), growingKey(rules), tostring(rules.keep),
                 tostring(rules.hideOther) }, ":")
             merging = not collect(view, rules, half, aroundKey, merging and UNMERGE or LIMIT)
         end

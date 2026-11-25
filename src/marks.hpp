@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <functional>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 #include "accounts.hpp"
@@ -62,6 +63,15 @@ namespace Marks {
     inline const int MaxWaiting = 8;
     // a result nobody took is dropped after this long
     inline const auto KeepResult = std::chrono::minutes(5);
+
+    // Points the overlay itself saw picked up and grown back by now (its own
+    // finds, never an extension's word): a change that unmarks only those
+    // isn't asked about. unmarked hears them once they're off.
+    struct GrownBack {
+        std::function<bool(const std::set<int64_t>&)> all;
+        std::function<void(const std::set<int64_t>&)> unmarked;
+    };
+    void SetGrownBack(GrownBack grownBack);
 
     void Init();
     void Shutdown();

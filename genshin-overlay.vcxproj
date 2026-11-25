@@ -167,6 +167,8 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClCompile Include="src\log_file.cpp" />
     <ClCompile Include="src\taskbar.cpp" />
     <ClCompile Include="src\item_catalog.cpp" />
+    <ClCompile Include="src\game_tables.cpp" />
+    <ClCompile Include="src\regrow.cpp" />
     <ClCompile Include="src\item_icons.cpp" />
     <ClCompile Include="src\item_files.cpp" />
     <ClCompile Include="src\item_patch.cpp" />
@@ -183,6 +185,7 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClCompile Include="src\map_follow.cpp" />
     <ClCompile Include="src\map_tiles.cpp" />
     <ClCompile Include="src\map_tracking.cpp" />
+    <ClCompile Include="src\marker_index.cpp" />
     <ClCompile Include="src\minimap.cpp" />
     <ClCompile Include="src\net.cpp" />
     <ClCompile Include="src\npcap_download.cpp" />
@@ -194,6 +197,14 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClCompile Include="src\game_traffic_text.cpp" />
     <ClCompile Include="src\packets\game_traffic.cpp" />
     <ClCompile Include="src\packets\kcp.cpp" />
+    <ClCompile Include="src\packets\learner.cpp" />
+    <ClCompile Include="src\packets\learning.cpp" />
+    <ClCompile Include="src\packets\world.cpp" />
+    <ClCompile Include="src\packets\floors.cpp" />
+    <ClCompile Include="src\packets\links.cpp" />
+    <ClCompile Include="src\packets\puzzles.cpp" />
+    <ClCompile Include="src\packets\finds.cpp" />
+    <ClCompile Include="src\packets\scene.cpp" />
     <ClCompile Include="src\packets\messages.cpp" />
     <ClCompile Include="src\packets\packet_capture.cpp" />
     <ClCompile Include="src\packets\reader.cpp" />
@@ -226,6 +237,9 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClInclude Include="src\files.hpp" />
     <ClInclude Include="src\file_dialogs.hpp" />
     <ClInclude Include="src\item_catalog.hpp" />
+    <ClInclude Include="src\game_tables.hpp" />
+    <ClInclude Include="src\regrow.hpp" />
+    <ClInclude Include="src\marker_index.hpp" />
     <ClInclude Include="src\item_icons.hpp" />
     <ClInclude Include="src\item_files.hpp" />
     <ClInclude Include="src\item_patch.hpp" />
@@ -256,6 +270,14 @@ xcopy /E /I /Y /Q "$(MSBuildProjectDirectory)\packets" "$(OutDir)packets" &gt;nu
     <ClInclude Include="src\update_check.hpp" />
     <ClInclude Include="src\packets\game_traffic.hpp" />
     <ClInclude Include="src\packets\kcp.hpp" />
+    <ClInclude Include="src\packets\learner.hpp" />
+    <ClInclude Include="src\packets\learning.hpp" />
+    <ClInclude Include="src\packets\world.hpp" />
+    <ClInclude Include="src\packets\floors.hpp" />
+    <ClInclude Include="src\packets\links.hpp" />
+    <ClInclude Include="src\packets\puzzles.hpp" />
+    <ClInclude Include="src\packets\finds.hpp" />
+    <ClInclude Include="src\packets\scene.hpp" />
     <ClInclude Include="src\packets\messages.hpp" />
     <ClInclude Include="src\packets\packet_capture.hpp" />
     <ClInclude Include="src\packets\reader.hpp" />

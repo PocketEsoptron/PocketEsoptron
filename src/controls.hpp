@@ -367,4 +367,6 @@ namespace Controls {
     // A small round bubble with a dark rim and short text in it, a count or
     // a sign. fill none: the theme's gold.
     void Bubble(ImDrawList* draw, ImVec2 center, float radius, const char* text, std::optional<unsigned int> fill = {});
+    // the same bubble with a clock in it: something that comes back later
+    void ClockBubble(ImDrawList* draw, ImVec2 center, float radius, std::optional<unsigned int> fill = {});
 }

@@ -5,6 +5,11 @@
 #include "item_patch.hpp"
 #include "map_data.hpp"
 #include "net.hpp"
+#include "game_tables.hpp"
+#include "packets/learner.hpp"
+#include "packets/links.hpp"
+#include "packets/scene.hpp"
+#include "regrow.hpp"
 #include <algorithm>
 #include <atomic>
 #include <cctype>
@@ -29,6 +34,8 @@ using ordered = nlohmann::ordered_json;
 
 namespace ItemFiles {
 	static const std::string APPSAMPLE = "https://game-data.lemonapi.com/gim/markers_all.v5.compressed.json";
+	static const std::string GAME_TABLES = "https://gitlab.com/Dimbreath/animegamedata2/-/raw/main/ExcelBinOutput/";
+	static const std::string TEXT_MAPS = "https://gitlab.com/Dimbreath/animegamedata2/-/raw/main/TextMap/";
 	// a pack bigger than this unpacked isn't ours (today's is about 17 MB)
 	static constexpr size_t MAX_RAW_SIZE = 128u * 1024 * 1024;
 	// A week adds a few points and takes a few away. A map that loses more than
@@ -861,6 +868,141 @@ namespace ItemFiles {
 		return true;
 	}
 
+	std::string trimGameTable(const std::string& name, const std::string& table) {
+		json rows = json::parse(table, nullptr, false);
+		if (!rows.is_array()) return std::string();
+		std::vector<std::string> keys;
+		if (name == GameTables::GADGETS) keys = { "id", "type", "jsonName" };
+		else if (name == GameTables::GATHERS) keys = { "gadgetId", "itemId", "pointType", "refreshId" };
+		else if (name == GameTables::MATERIALS) keys = { "id", "itemType", "materialType", "rank" };
+		else return std::string();
+		ordered out = ordered::array();
+		for (const json& row : rows) {
+			if (!row.is_object()) continue;
+			ordered kept = ordered::object();
+			for (const std::string& key : keys)
+				if (row.contains(key)) kept[key] = row[key];
+			if (!kept.empty()) out.push_back(std::move(kept));
+		}
+		return out.dump();
+	}
+
+	std::string nameGrowingItems(const std::string& trimmed, const std::string& materials,
+		const std::string& gathers, const std::vector<std::string>& textMaps) {
+		json materialRows = json::parse(materials, nullptr, false);
+		ordered out = ordered::parse(trimmed, nullptr, false);
+		GameTables::Tables tables;
+		if (!materialRows.is_array() || !out.is_array() || !tables.read(GameTables::GATHERS, gathers)
+			|| !tables.read(GameTables::MATERIALS, trimmed))
+			return trimmed;
+		std::set<uint64_t> items;
+		for (const GameTables::Gather& gather : tables.allGathers())
+			items.insert(gather.item);
+		for (const json& row : out)
+			if (row.is_object() && row.contains("id") && row["id"].is_number_unsigned()
+				&& Regrow::Of(uint32_t(row["id"].get<uint64_t>()), tables).grows())
+				items.insert(row["id"].get<uint64_t>());
+		// item -> its name's hash, as the text maps write it
+		std::map<uint64_t, std::string> hashOf;
+		std::set<std::string> wanted;
+		for (const json& row : materialRows) {
+			if (!row.is_object() || !row.contains("id") || !row["id"].is_number_unsigned() || !items.count(row["id"].get<uint64_t>())) continue;
+			auto hash = row.find("nameTextMapHash");
+			if (hash == row.end() || !hash->is_number()) continue;
+			std::string key = hash->dump();
+			hashOf[row["id"].get<uint64_t>()] = key;
+			wanted.insert(key);
+		}
+		std::map<std::string, std::string> names;
+		for (const std::string& textMap : textMaps) {
+			// only the wanted names are kept while it's read, the maps are tens of MB
+			json map = json::parse(textMap, [&](int depth, json::parse_event_t event, json& parsed) {
+				return depth != 1 || event != json::parse_event_t::key || wanted.count(parsed.get<std::string>()) > 0;
+			}, false);
+			if (!map.is_object()) return trimmed;
+			for (auto& [key, value] : map.items())
+				if (value.is_string() && !value.get<std::string>().empty()) names.emplace(key, value.get<std::string>());
+		}
+		for (ordered& row : out) {
+			if (!row.is_object() || !row.contains("id") || !row["id"].is_number_unsigned()) continue;
+			auto hash = hashOf.find(row["id"].get<uint64_t>());
+			auto name = hash == hashOf.end() ? names.end() : names.find(hash->second);
+			if (name != names.end()) row["name"] = name->second;
+		}
+		return out.dump();
+	}
+
+	// the fresh rows with the names the published rows have, by id
+	static std::string keepNames(const std::string& fresh, const std::string& published) {
+		ordered out = ordered::parse(fresh, nullptr, false);
+		json old = json::parse(published, nullptr, false);
+		if (!out.is_array() || !old.is_array()) return fresh;
+		std::map<uint64_t, json> names;
+		for (const json& row : old)
+			if (row.is_object() && row.contains("id") && row["id"].is_number_unsigned() && row.contains("name"))
+				names[row["id"].get<uint64_t>()] = row["name"];
+		for (ordered& row : out) {
+			if (!row.is_object() || !row.contains("id") || !row["id"].is_number_unsigned()) continue;
+			auto name = names.find(row["id"].get<uint64_t>());
+			if (name != names.end()) row["name"] = name->second;
+		}
+		return out.dump();
+	}
+
+	// game/: the tables from AnimeGameData, the published pack's when one doesn't come,
+	// and the ids, formulas and links this build ships
+	static bool writeGame(const std::string& publishedRaw, const fs::path& folder, bool& kept) {
+		kept = false;
+		std::map<std::string, std::string> published;
+		if (!publishedRaw.empty())
+			readPack(publishedRaw, [&](const std::string& name, std::string_view data) {
+				if (name.compare(0, GameTables::FOLDER.size(), GameTables::FOLDER) == 0) published[name] = std::string(data);
+				return true;
+			});
+		const std::pair<std::string, std::string> tables[] = { { GameTables::GADGETS, "GadgetExcelConfigData.json" },
+			{ GameTables::GATHERS, "GatherExcelConfigData.json" }, { GameTables::MATERIALS, "MaterialExcelConfigData.json" } };
+		std::string gathers;
+		for (const auto& [name, source] : tables) {
+			Net::Response response;
+			std::string trimmed;
+			if (Net::get(GAME_TABLES + source, response) && response.status == 200) trimmed = trimGameTable(name, response.body);
+			if (name == GameTables::GATHERS && !trimmed.empty()) gathers = trimmed;
+			if (name == GameTables::MATERIALS && !trimmed.empty() && trimmed != "[]") {
+				std::vector<std::string> textMaps;
+				if (gathers.empty()) std::cerr << "[items] the gathers didn't come, nothing to name" << std::endl;
+				else for (const char* map : { "TextMapEN.json", "TextMap_MediumEN.json" }) {
+					Net::Response text;
+					if (!Net::get(TEXT_MAPS + map, text) || text.status != 200) {
+						std::cerr << "[items] " << map << " didn't come" << std::endl;
+						break;
+					}
+					textMaps.push_back(std::move(text.body));
+				}
+				// names that didn't come are tried again on the next run, like a table
+				if (textMaps.size() != 2) kept = true;
+				std::string named = textMaps.size() == 2 ? nameGrowingItems(trimmed, response.body, gathers, textMaps) : trimmed;
+				if (named == trimmed) {
+					std::cerr << "[items] the items have no names, the published ones are kept" << std::endl;
+					named = keepNames(trimmed, published[name]);
+				}
+				trimmed = named;
+			}
+			if (trimmed.empty() || trimmed == "[]") {
+				kept = true;
+				if (published[name].empty()) {
+					std::cerr << "[items] " << source << " didn't come, " << name << " is left out" << std::endl;
+					continue;
+				}
+				std::cerr << "[items] " << source << " didn't come, " << name << " stays as published" << std::endl;
+				trimmed = published[name];
+			}
+			if (!Files::writeFile(folder / fs::u8path(name), trimmed)) return false;
+		}
+		return Files::writeFile(folder / fs::u8path(GameTables::LEARNED), Learner::ToJson(Learner::Shipped()))
+			&& Files::writeFile(folder / fs::u8path(GameTables::SCENES), Scene::ToJson(Scene::Shipped()))
+			&& Files::writeFile(folder / fs::u8path(GameTables::LINKS), Links::KnownToJson(Links::Shipped()));
+	}
+
 	// Which appsample point each HoYoLAB point is, for showing the comments people left there.
 	static bool pairWithAppsample(Source& source) {
 		Net::Response response;
@@ -913,9 +1055,10 @@ namespace ItemFiles {
 
 	int make(const fs::path& folder, bool allowDrop) {
 		// from scratch, so what HoYoLAB removed goes
-		fs::path items = folder / "items";
+		fs::path items = folder / "items", kept = folder / "game-kept.txt";
 		std::error_code ec;
 		fs::remove_all(items, ec);
+		fs::remove(kept, ec);
 
 		std::cout << "Reading HoYoLAB's map items..." << std::endl;
 		Source source;
@@ -943,7 +1086,9 @@ namespace ItemFiles {
 		std::string publishedRaw = fetchPublishedPack(published);
 		keepPublishedIcons(publishedRaw, downloadIcons(icons, items / "icons"), items);
 		// without appsample the pack would lose every pair for a week, so the published one stays
-		if (!pairWithAppsample(source) || !write(source, items)) return 1;
+		bool keptGame = false;
+		if (!pairWithAppsample(source) || !write(source, items) || !writeGame(publishedRaw, items, keptGame)) return 1;
+		if (keptGame && !Files::writeFile(kept, "a game table didn't download\n")) return 1;
 
 		std::string raw;
 		if (!pack(items, raw)) return 1;

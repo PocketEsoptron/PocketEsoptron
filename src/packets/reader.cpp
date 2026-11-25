@@ -277,6 +277,7 @@ namespace Packets {
             m_dropped++;
             return;
         }
+        opened.ms = message.ms;
 
         if (message.direction == Frames::Direction::Received) {
             uint64_t sentMs = 0, unpackedSize = 0;
@@ -314,8 +315,10 @@ namespace Packets {
             return;
         }
         Messages::Message opened;
-        if (Messages::Open(m_key, message.data, message.direction, opened))
+        if (Messages::Open(m_key, message.data, message.direction, opened)) {
+            opened.ms = message.ms;
             out.push_back(std::move(opened));
+        }
         else
             m_dropped++;
     }

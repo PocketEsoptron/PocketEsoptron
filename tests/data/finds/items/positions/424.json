@@ -1,0 +1,10 @@
+[
+{"id":32846,"map_id":2,"x_pos":-2964.5,"y_pos":2905.5,"area_id":4,"point_group":{"group_id":6,"floor_id":31}},
+{"id":32845,"map_id":2,"x_pos":-3014,"y_pos":2890,"area_id":4,"point_group":{"group_id":6,"floor_id":31}},
+{"id":32844,"map_id":2,"x_pos":-3092,"y_pos":2906,"area_id":4,"point_group":{"group_id":6,"floor_id":31}},
+{"id":32843,"map_id":2,"x_pos":-4689,"y_pos":2740.5,"area_id":4,"point_group":{"group_id":44,"floor_id":54}},
+{"id":32842,"map_id":2,"x_pos":-4104,"y_pos":2672.5,"area_id":4,"point_group":{"group_id":21,"floor_id":43}},
+{"id":30688,"map_id":2,"x_pos":-4243,"y_pos":2952.5,"area_id":4,"point_group":null},
+{"id":30683,"map_id":2,"x_pos":-3264,"y_pos":2603,"area_id":4,"point_group":null},
+{"id":30682,"map_id":2,"x_pos":-3520,"y_pos":2354,"area_id":4,"point_group":null}
+]

@@ -21,7 +21,9 @@
 #include "settings.hpp"
 #include "notices.hpp"
 #include "screen_pictures.hpp"
+#include "packets/finds.hpp"
 #include "packets/game_traffic.hpp"
+#include "game_traffic_text.hpp"
 #include "accounts.hpp"
 #include "game_server.hpp"
 #include "marks.hpp"
@@ -39,6 +41,7 @@
 #include <chrono>
 #include <ctime>
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <memory>
 #include <condition_variable>
@@ -220,8 +223,11 @@ namespace LuaFunctions {
 		global("GetItemPositions", MapInfo, GetItemPositions);
 		global("GetItemRegions", MapInfo, GetItemRegions);
 		global("GetItemIcon", MapInfo, GetItemIcon);
+		global("CheckForMapItems", MapInfo, CheckForMapItems);
 		global("GetGameTraffic", None, GetGameTraffic);
 		global("GetGameServer", Permission::GameServer, GetGameServer);
+		global("GetFinds", MapInfo, GetFinds);
+		global("SetFindsDone", MapInfo, SetFindsDone);
 
 		// the player's logins, each site's account permission checked inside
 		global("GetAccount", None, GetAccount);
@@ -320,6 +326,12 @@ namespace LuaFunctions {
 		if (used && Extensions::currentExtension) Extensions::currentExtension->dots.erase(label);
 	}
 
+	// the player flipped one of its switches just now (asks after it in this
+	// frame are the player's own, like a press's)
+	static void playerFlipped() {
+		if (Extensions::currentExtension) Extensions::currentExtension->flippedFrame = ImGui::GetFrameCount();
+	}
+
 	// ImGUI_Button(label, onPress, options), options is optional:
 	// { look = "main" or "risky", busy = true or the text to show while busy }
 	void ImGUI_Button(const std::string& label, sol::protected_function callback, sol::optional<sol::table> table) {
@@ -351,7 +363,9 @@ namespace LuaFunctions {
 		if (!inMenu("ImGUI_Checkbox")) return value;
 		Controls::ToggleOptions options;
 		options.dotted = dotted(label);
-		used(label, Controls::Toggle(label.c_str(), &value, options));
+		bool flipped = Controls::Toggle(label.c_str(), &value, options);
+		used(label, flipped);
+		if (flipped) playerFlipped();
 		return value;
 	}
 
@@ -748,9 +762,17 @@ namespace LuaFunctions {
 		return ::Notices::Add(ext->folderKey, ext->name, kind, text, glfwGetTime(), tip) != 0;
 	}
 
+	// at most max bytes of it, never half a UTF-8 character
+	static std::string cutText(const std::string& text, size_t max) {
+		std::string shown = text.substr(0, max);
+		while (!shown.empty() && shown.size() < text.size() && (text[shown.size()] & 0xC0) == 0x80) shown.pop_back();
+		return shown;
+	}
+
 	// ImGUI_Toggle(label, value, options), options is optional:
 	// { look = "checkbox" or "chip", size = "small", icon = a texture from LoadTexture,
-	//   note = muted text after a chip's name }
+	//   note = muted text after a chip's name,
+	//   lines = { "...", ... } grey lines under a switch's name, wrapped beside it }
 	bool ImGUI_Toggle(const std::string& label, bool currentValue, sol::optional<sol::table> table)
 	{
 		bool value = currentValue;
@@ -763,9 +785,18 @@ namespace LuaFunctions {
 			options.note = table->get_or<std::string>("note", "");
 			options.compact = table->get_or<std::string>("size", "") == "small";
 			options.icon = iconOf("ImGUI_Toggle", *table);
+			sol::optional<sol::table> lines = table->get<sol::optional<sol::table>>("lines");
+			if (lines) {
+				for (size_t i = 1; i <= std::min<size_t>(lines->size(), 4); i++) {
+					sol::optional<std::string> line = (*lines)[i];
+					if (line && !line->empty()) options.lines.push_back({ cutText(*line, 300) });
+				}
+			}
 		}
 		options.dotted = dotted(label);
-		used(label, Controls::Toggle(label.c_str(), &value, options));
+		bool flipped = Controls::Toggle(label.c_str(), &value, options);
+		used(label, flipped);
+		if (flipped) playerFlipped();
 		return value;
 	}
 
@@ -2590,14 +2621,19 @@ namespace LuaFunctions {
 	{
 		if (!inFrame("DrawBubble")) return;
 		std::optional<unsigned int> fill;
+		std::string sign;
 		if (options) {
 			sol::optional<uint32_t> color = (*options)["color"];
 			if (color) fill = *color;
+			sign = options->get_or<std::string>("sign", "");
 		}
+		if (sign == "clock") {
+			Controls::ClockBubble(ImGui::GetBackgroundDrawList(), ImVec2(x, y), radius, fill);
+			return;
+		}
+		if (!sign.empty()) Extensions::logOnce("DrawBubble", "sign is clock or nothing");
 		// a count or a sign, not a sentence
-		std::string shown = text.substr(0, 8);
-		// never half a UTF-8 character
-		while (!shown.empty() && shown.size() < text.size() && (text[shown.size()] & 0xC0) == 0x80) shown.pop_back();
+		std::string shown = cutText(text, 8);
 		Controls::Bubble(ImGui::GetBackgroundDrawList(), ImVec2(x, y), radius, shown.c_str(), fill);
 	}
 
@@ -2663,6 +2699,7 @@ namespace LuaFunctions {
 		sol::table types(const ItemCatalog::Catalog* catalog, sol::state_view lua) {
 			sol::table groups = lua.create_table();
 			if (!catalog) return groups;
+			std::set<int> found = Finds::AutoTypesNow();
 			int g = 1;
 			for (const auto& group : catalog->groups) {
 				sol::table types = lua.create_table((int)group.types.size(), 0);
@@ -2670,7 +2707,9 @@ namespace LuaFunctions {
 				for (const auto& type : group.types) {
 					sol::table counts = lua.create_table();
 					for (const auto& [map, n] : type.counts) counts[map] = n;
-					types[t++] = lua.create_table_with("id", type.id, "name", type.name, "counts", counts);
+					sol::table each = lua.create_table_with("id", type.id, "name", type.name, "counts", counts);
+					if (found.count(type.id)) each["auto"] = true;
+					types[t++] = each;
 				}
 				groups[g++] = lua.create_table_with("id", group.id, "name", group.name, "types", types);
 			}
@@ -2726,6 +2765,22 @@ namespace LuaFunctions {
 		return Items::table(Items::frameCatalog ? Items::frameCatalog->version : 0, ItemFiles::GetStatus(), state);
 	}
 
+	// the menu's "Check for new map items", only from the function of a button
+	// or key; GetItems().checking is true until it's done. Nothing while the
+	// player has the download off.
+	void CheckForMapItems() {
+		Extensions::Extension* ext = Extensions::currentExtension;
+		if (!ext) return;
+		if (ext->playerAction == 0) {
+			Extensions::logOnce("CheckForMapItems", "runs only from the function of its button or key");
+			return;
+		}
+		if (Settings::downloadItems) ItemFiles::CheckNow();
+	}
+
+	// [{ id, name, types }], each type { id, name, counts (points by map id),
+	// auto = true when the overlay finds it done by itself while it reads the
+	// game's traffic }; auto can change with the list, the Items trigger's "auto"
 	sol::object GetItemTypes(sol::this_state state) {
 		return Items::types(Items::frameCatalog.get(), state);
 	}
@@ -2800,14 +2855,16 @@ namespace LuaFunctions {
 	// in the menu. state is off, cant_listen, waiting_for_login, searching,
 	// reading, needs_relog or no_key, and reason says why for cant_listen,
 	// needs_relog and no_key (npcap_missing, started_late, unknown_key_id and so
-	// on), "" otherwise. Codes, not sentences: the menu says what they mean.
-	// Needs no permission, it's only a status. An extension can't turn it on.
+	// on), "" otherwise. text is what the menu's Game traffic section says
+	// about it, for showing the same words. Needs no permission, it's only a
+	// status. An extension can't turn it on, AskForPermission("Game traffic") asks.
 	sol::table gameTrafficTable(bool on, const GameTraffic::Status& status, sol::state_view lua)
 	{
 		return lua.create_table_with(
 			"on", on,
 			"state", std::string(GameTraffic::StateCode(status)),
-			"reason", std::string(GameTraffic::ReasonCode(status)));
+			"reason", std::string(GameTraffic::ReasonCode(status)),
+			"text", GameTrafficText::For(status).text);
 	}
 
 	sol::table GetGameTraffic(sol::this_state state)
@@ -2829,6 +2886,110 @@ namespace LuaFunctions {
 	sol::object GetGameServer(sol::this_state state)
 	{
 		return gameServerTable(Settings::gameServer, (int64_t)std::time(nullptr), state);
+	}
+
+	static const char* howName(Finds::How how) {
+		switch (how) {
+		case Finds::How::Opened: return "opened";
+		case Finds::How::PickedUp: return "picked_up";
+		case Finds::How::Back: return "back";
+		case Finds::How::Used: return "used";
+		default: return "solved";
+		}
+	}
+
+	static std::string objectKey(uint32_t group, uint32_t config) {
+		return std::to_string(group) + "/" + std::to_string(config);
+	}
+
+	sol::table findsTable(uint64_t after, sol::state_view lua)
+	{
+		std::vector<Finds::Numbered> finds = Finds::Recent(after);
+		sol::table list = lua.create_table((int)finds.size(), 0);
+		// a time by the server's clock would tell the server
+		Extensions::Extension* ext = Extensions::currentExtension;
+		bool server = ext && ext->extensionPermissions.count(Permission::GameServer);
+		int i = 1;
+		for (const Finds::Numbered& n : finds) {
+			const Finds::Found& f = n.found;
+			if (f.byServer && !server) continue;
+			std::string object = f.how == Finds::How::Solved ? "" : objectKey(f.group, f.config);
+			sol::table each = lua.create_table_with("id", n.id, "how", howName(f.how), "type", f.type,
+				"map", f.map, "x", f.x, "y", f.y, "object", object);
+			if (f.item) each["item"] = f.item;
+			if (f.backAt) each["back_at"] = f.backAt;
+			if (f.point) {
+				each["point"] = f.point;
+			} else if (f.how != Finds::How::Back) {
+				sol::table maybe = lua.create_table((int)f.candidates.size(), 0);
+				int c = 1;
+				for (int32_t id : f.candidates) maybe[c++] = id;
+				each["maybe"] = maybe;
+				sol::table rivals = lua.create_table((int)f.rivals.size(), 0);
+				int r = 1;
+				for (auto& [group, config] : f.rivals) rivals[r++] = objectKey(group, config);
+				each["rivals"] = rivals;
+				if (f.maybeNone) each["maybe_none"] = true;
+			}
+			list[i++] = each;
+		}
+		return list;
+	}
+
+	sol::table GetFinds(sol::optional<uint64_t> after, sol::this_state state)
+	{
+		return findsTable(after.value_or(0), state);
+	}
+
+	// the point ids of a list, the rest left out
+	static std::vector<int32_t> pointIds(const sol::object& list) {
+		std::vector<int32_t> out;
+		if (list.get_type() != sol::type::table) return out;
+		for (auto& [key, value] : list.as<sol::table>()) {
+			if (value.get_type() != sol::type::number) continue;
+			double id = value.as<double>();
+			if (id >= 1 && id <= INT32_MAX && id == std::floor(id)) out.push_back((int32_t)id);
+		}
+		return out;
+	}
+
+	// "group/config", false when it isn't one
+	static bool objectNamed(const std::string& text, uint32_t& group, uint32_t& config) {
+		const char* end = text.data() + text.size();
+		auto [slash, e1] = std::from_chars(text.data(), end, group);
+		if (e1 != std::errc() || slash == end || *slash != '/' || !group) return false;
+		auto [rest, e2] = std::from_chars(slash + 1, end, config);
+		return e2 == std::errc() && rest == end;
+	}
+
+	void SetFindsDone(sol::table done, sol::optional<sol::table> growing)
+	{
+		Extensions::Extension* ext = Extensions::currentExtension;
+		if (!ext) return;
+		std::vector<int32_t> ids = pointIds(done);
+		std::unordered_set<int32_t> doneSet(ids.begin(), ids.end());
+		std::vector<Finds::Growing> waiting;
+		if (growing) {
+			for (auto& [key, value] : *growing) {
+				if (value.get_type() != sol::type::table) continue;
+				sol::table each = value.as<sol::table>();
+				Finds::Growing g;
+				g.at = each.get_or<int64_t>("back_at", 0);
+				g.points = pointIds(each["points"]);
+				sol::optional<std::string> object = each["object"];
+				if (object && !object->empty() && !objectNamed(*object, g.group, g.config)) {
+					Extensions::logOnce("SetFindsDone", "object is \"group/config\", as GetFinds gives it");
+					continue;
+				}
+				if (g.at > 0 && (g.group || !g.points.empty())) waiting.push_back(std::move(g));
+			}
+		}
+		Finds::SetDoneFor(ext, std::move(doneSet), std::move(waiting));
+	}
+
+	void forgetFinds(Extensions::Extension* owner)
+	{
+		Finds::ForgetDone(owner);
 	}
 
 	static Permission accountPermission(Accounts::Site site) {
